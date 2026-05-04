@@ -1,9 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../../store';
 import type { Character, GMCharacterFormData } from '../../types';
 import CreateNPCModal from './CreateNPCModal';
 
 type EditTarget = GMCharacterFormData & { originalName: string };
+
+const ATTR_ABBR: { key: keyof Character['attributes']; abbr: string }[] = [
+  { key: 'strength', abbr: 'FOR' },
+  { key: 'dexterity', abbr: 'DES' },
+  { key: 'constitution', abbr: 'CON' },
+  { key: 'intelligence', abbr: 'INT' },
+  { key: 'wisdom', abbr: 'SAB' },
+  { key: 'charisma', abbr: 'CAR' },
+];
+
+const attrBonus = (val: number): string => {
+  const mod = Math.floor((val - 10) / 2);
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+};
 
 const buildFormData = (char: Character): EditTarget => ({
   originalName: char.name,
@@ -22,6 +36,8 @@ const buildFormData = (char: Character): EditTarget => ({
   intelligence: char.attributes.intelligence,
   wisdom: char.attributes.wisdom,
   charisma: char.attributes.charisma,
+  actions: char.actions ?? '',
+  items: char.items ?? '',
 });
 
 export default function GMCharactersTab() {
@@ -34,16 +50,41 @@ export default function GMCharactersTab() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterRace, setFilterRace] = useState('');
+  const [filterClass, setFilterClass] = useState('');
 
   if (!campaign) return null;
 
   const gmNames = campaign.gmCharacterNames ?? [];
   const gmChars = gmNames.map((n) => characters[n]).filter(Boolean) as Character[];
 
+  const uniqueRaces = useMemo(
+    () => [...new Set(gmChars.map((c) => c.race).filter(Boolean))].sort(),
+    [gmChars],
+  );
+  const uniqueClasses = useMemo(
+    () => [...new Set(gmChars.map((c) => c.class).filter(Boolean))].sort(),
+    [gmChars],
+  );
+
+  const filtered = gmChars.filter((char) => {
+    if (search && !char.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterType && char.origin !== filterType) return false;
+    if (filterRace && char.race !== filterRace) return false;
+    if (filterClass && char.class !== filterClass) return false;
+    return true;
+  });
+
+  const hasFilters = search || filterType || filterRace || filterClass;
+
+  const selectStyle = { fontSize: 12, padding: '4px 6px', minWidth: 90 };
+
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex-between" style={{ marginBottom: 16 }}>
+      <div className="flex-between" style={{ marginBottom: 12 }}>
         <p className="sec-title" style={{ margin: 0 }}>
           Personagens do Mestre ({gmChars.length})
         </p>
@@ -55,6 +96,44 @@ export default function GMCharactersTab() {
         </button>
       </div>
 
+      {/* Search + Filters */}
+      {gmChars.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome..."
+            style={{ flex: 1, minWidth: 120, fontSize: 12, padding: '4px 8px' }}
+          />
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={selectStyle}>
+            <option value="">Tipo: Todos</option>
+            <option value="NPC">NPC</option>
+            <option value="Monstro">Monstro</option>
+          </select>
+          {uniqueRaces.length > 0 && (
+            <select value={filterRace} onChange={(e) => setFilterRace(e.target.value)} style={selectStyle}>
+              <option value="">Raça: Todas</option>
+              {uniqueRaces.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          )}
+          {uniqueClasses.length > 0 && (
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={selectStyle}>
+              <option value="">Classe: Todas</option>
+              {uniqueClasses.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          {hasFilters && (
+            <button
+              className="btn-ghost btn-sm"
+              onClick={() => { setSearch(''); setFilterType(''); setFilterRace(''); setFilterClass(''); }}
+              style={{ fontSize: 11, color: 'var(--text2)' }}
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Empty state */}
       {gmChars.length === 0 && (
         <div className="empty-state">
@@ -65,9 +144,15 @@ export default function GMCharactersTab() {
         </div>
       )}
 
+      {gmChars.length > 0 && filtered.length === 0 && (
+        <p style={{ fontSize: 12, color: 'var(--text2)', textAlign: 'center', padding: '20px 0' }}>
+          Nenhum personagem encontrado com esses filtros.
+        </p>
+      )}
+
       {/* Character list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {gmChars.map((char) => (
+        {filtered.map((char) => (
           <div key={char.name} className="gm-card">
             <div className="gm-card-header">
               <div className="flex-between">
@@ -79,7 +164,6 @@ export default function GMCharactersTab() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {/* Na cena toggle */}
                   <label
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
@@ -116,9 +200,9 @@ export default function GMCharactersTab() {
               </div>
             </div>
 
-            {/* Vitals summary */}
             <div className="gm-card-body" style={{ padding: '8px 16px' }}>
-              <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text2)', flexWrap: 'wrap' }}>
+              {/* Vitals */}
+              <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text2)', flexWrap: 'wrap', marginBottom: 10 }}>
                 <span>
                   PV:{' '}
                   <strong style={{ color: 'var(--hp)' }}>
@@ -140,6 +224,51 @@ export default function GMCharactersTab() {
                   Desl.: <strong>{char.speed}q</strong>
                 </span>
               </div>
+
+              {/* Attributes */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ATTR_ABBR.map(({ key, abbr }) => {
+                  const val = char.attributes[key];
+                  const bonus = attrBonus(val);
+                  return (
+                    <div key={key} style={{ textAlign: 'center', minWidth: 38 }}>
+                      <div style={{ fontSize: 9, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                        {abbr}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>
+                        {val}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }}>
+                        {bonus}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Actions */}
+              {char.actions && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 3 }}>
+                    Ações
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text1)', whiteSpace: 'pre-wrap', margin: 0 }}>
+                    {char.actions}
+                  </p>
+                </div>
+              )}
+
+              {/* Items */}
+              {char.items && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 3 }}>
+                    Itens Carregados
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text1)', whiteSpace: 'pre-wrap', margin: 0 }}>
+                    {char.items}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         ))}

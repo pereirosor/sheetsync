@@ -437,6 +437,8 @@ export const useStore = create<AppState>((set, get) => ({
       equipment: [],
       spells: [],
       notes: '',
+      actions: data.actions,
+      items: data.items,
       owner: 'gm',
       inScene: false,
     };
@@ -484,6 +486,8 @@ export const useStore = create<AppState>((set, get) => ({
         wisdom: data.wisdom,
         charisma: data.charisma,
       },
+      actions: data.actions,
+      items: data.items,
     };
     const gmNames = (campaign.gmCharacterNames ?? []).map((n) =>
       n === originalName ? data.name : n,

@@ -78,6 +78,8 @@ export interface Character {
   equipment: EquipmentItem[];
   spells: SpellItem[];
   notes: string;
+  actions?: string;
+  items?: string;
   owner: 'player' | 'gm';
   inScene: boolean;
 }
@@ -111,6 +113,8 @@ export interface GMCharacterFormData {
   intelligence: number;
   wisdom: number;
   charisma: number;
+  actions: string;
+  items: string;
 }
 
 export interface GameSystem {

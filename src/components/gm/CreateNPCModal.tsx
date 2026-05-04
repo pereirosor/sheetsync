@@ -16,6 +16,11 @@ const ATTR_LABELS: { key: keyof Pick<GMCharacterFormData, 'strength' | 'dexterit
   { key: 'charisma', abbr: 'CAR' },
 ];
 
+const attrBonus = (val: number): string => {
+  const mod = Math.floor((val - 10) / 2);
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+};
+
 export default function CreateNPCModal({ initialValues, onClose, onSubmit }: Props) {
   const iv = initialValues;
   const [name, setName] = useState(iv?.name ?? '');
@@ -35,6 +40,8 @@ export default function CreateNPCModal({ initialValues, onClose, onSubmit }: Pro
     wisdom: iv?.wisdom ?? 10,
     charisma: iv?.charisma ?? 10,
   });
+  const [actions, setActions] = useState(iv?.actions ?? '');
+  const [items, setItems] = useState(iv?.items ?? '');
   const [error, setError] = useState('');
 
   const setAttr = (key: keyof typeof attrs, val: number) =>
@@ -56,6 +63,8 @@ export default function CreateNPCModal({ initialValues, onClose, onSubmit }: Pro
       ac,
       speed,
       ...attrs,
+      actions,
+      items,
     };
     onSubmit(data, iv?.originalName);
     onClose();
@@ -165,8 +174,35 @@ export default function CreateNPCModal({ initialValues, onClose, onSubmit }: Pro
                 onChange={(e) => setAttr(key, Number(e.target.value))}
                 style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, padding: '4px 2px' }}
               />
+              <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 3, fontWeight: 600 }}>
+                {attrBonus(attrs[key])}
+              </div>
             </div>
           ))}
+        </div>
+
+        {/* Ações */}
+        <p className="sec-title">Ações</p>
+        <div className="form-row" style={{ marginBottom: 12 }}>
+          <textarea
+            value={actions}
+            onChange={(e) => setActions(e.target.value)}
+            placeholder="Descreva as ações que este personagem pode realizar em combate..."
+            rows={3}
+            style={{ resize: 'vertical', fontSize: 13 }}
+          />
+        </div>
+
+        {/* Itens */}
+        <p className="sec-title">Itens Carregados</p>
+        <div className="form-row" style={{ marginBottom: 16 }}>
+          <textarea
+            value={items}
+            onChange={(e) => setItems(e.target.value)}
+            placeholder="Liste os itens que este personagem carrega..."
+            rows={3}
+            style={{ resize: 'vertical', fontSize: 13 }}
+          />
         </div>
 
         {error && <p style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{error}</p>}
