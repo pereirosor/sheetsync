@@ -31,7 +31,15 @@ export default function SkillsTab({ characterName }: Props) {
 
   const handleRoll = (skillName: string, modifier: number) => {
     const result = rollDie(20);
-    rollDice({ rollerName: char.name || characterName, label: skillName, diceExpr: '1d20', result, modifier, total: result + modifier });
+    const total = result + modifier;
+    const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    rollDice({
+      rollerName: char.name || characterName,
+      label: skillName,
+      diceExpr: `1d20+${skillName}`,
+      breakdown: `d20[${result}]${modStr}`,
+      total,
+    });
   };
 
   return (

@@ -124,7 +124,7 @@ export default function IdentityTab({ characterName }: Props) {
         </div>
       </div>
 
-      <div className="g3">
+      <div className="g2">
         <div className="form-row">
           <label>Mana Máxima</label>
           <input
@@ -144,18 +144,6 @@ export default function IdentityTab({ characterName }: Props) {
             onChange={(e) => {
               updateCharacter(characterName, {
                 vitals: { ...char.vitals, mana: { ...char.vitals.mana, current: Number(e.target.value) } },
-              });
-            }}
-          />
-        </div>
-        <div className="form-row">
-          <label>Sanidade Máxima</label>
-          <input
-            type="number" min={0} value={char.vitals.sanity.max}
-            onChange={(e) => {
-              const max = Number(e.target.value);
-              updateCharacter(characterName, {
-                vitals: { ...char.vitals, sanity: { current: Math.min(char.vitals.sanity.current, max), max } },
               });
             }}
           />

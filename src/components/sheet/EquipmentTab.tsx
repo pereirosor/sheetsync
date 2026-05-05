@@ -1,15 +1,12 @@
 import { useStore } from '../../store';
 import type { EquipmentItem } from '../../types';
-import tormenta20, { skillTotal } from '../../systems/tormenta20';
+import { evalDiceExpr } from '../../utils/dice';
 
 interface Props {
   characterName: string;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
-const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
-
-const DICE_TYPES = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
 
 const emptyItem = (): EquipmentItem => ({
   id: genId(),
@@ -28,36 +25,15 @@ export default function EquipmentTab({ characterName }: Props) {
   if (!char) return null;
 
   const setItems = (equipment: EquipmentItem[]) => updateCharacter(characterName, { equipment });
-
   const addItem = () => setItems([...char.equipment, emptyItem()]);
-
   const removeItem = (id: string) => setItems(char.equipment.filter((i) => i.id !== id));
-
-  const updateItem = (id: string, field: keyof EquipmentItem, value: string | number) => {
+  const updateItem = (id: string, field: keyof EquipmentItem, value: string | number) =>
     setItems(char.equipment.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
-  };
 
   const handleRoll = (item: EquipmentItem) => {
-    if (!item.diceType) return;
-    const sides = parseInt(item.diceType.slice(1), 10);
-    const result = rollDie(sides);
-    let modifier = 0;
-    if (item.diceSkill) {
-      const skillDef = tormenta20.skillList.find((s) => s.id === item.diceSkill);
-      if (skillDef) {
-        const attrVal = char.attributes[skillDef.attribute];
-        const trained = char.skills[item.diceSkill] ?? false;
-        modifier = skillTotal(attrVal, trained, char.level);
-      }
-    }
-    rollDice({
-      rollerName: char.name || characterName,
-      label: item.name || 'Item',
-      diceExpr: `1${item.diceType}`,
-      result,
-      modifier,
-      total: result + modifier,
-    });
+    if (!item.diceExpr?.trim()) return;
+    const { total, breakdown } = evalDiceExpr(item.diceExpr, char);
+    rollDice({ rollerName: char.name || characterName, label: item.name || 'Item', diceExpr: item.diceExpr, breakdown, total });
   };
 
   const totalWeight = char.equipment.reduce((s, i) => s + i.weight, 0);
@@ -88,91 +64,54 @@ export default function EquipmentTab({ characterName }: Props) {
                 <th style={{ minWidth: 90 }}>Bônus/Dano</th>
                 <th style={{ minWidth: 60 }}>Peso</th>
                 <th style={{ minWidth: 120 }}>Notas</th>
-                <th style={{ minWidth: 70 }}>Dado</th>
-                <th style={{ minWidth: 120 }}>Perícia</th>
-                <th style={{ width: 70 }} />
+                <th style={{ minWidth: 160 }}>Expressão de Dado</th>
+                <th style={{ width: 52 }} />
               </tr>
             </thead>
             <tbody>
               {char.equipment.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    <input
-                      value={item.name}
-                      placeholder="Nome do item"
-                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                    />
+                    <input value={item.name} placeholder="Nome do item"
+                      onChange={(e) => updateItem(item.id, 'name', e.target.value)} />
                   </td>
                   <td>
-                    <select
-                      value={item.type}
-                      onChange={(e) => updateItem(item.id, 'type', e.target.value)}
-                    >
+                    <select value={item.type} onChange={(e) => updateItem(item.id, 'type', e.target.value)}>
                       <option value="weapon">Arma</option>
                       <option value="armor">Armadura</option>
                       <option value="item">Item</option>
                     </select>
                   </td>
                   <td>
-                    <input
-                      value={item.bonusOrDamage}
-                      placeholder="Ex: 2d6+3"
-                      onChange={(e) => updateItem(item.id, 'bonusOrDamage', e.target.value)}
-                    />
+                    <input value={item.bonusOrDamage} placeholder="Ex: 2d6+3"
+                      onChange={(e) => updateItem(item.id, 'bonusOrDamage', e.target.value)} />
+                  </td>
+                  <td>
+                    <input type="number" min={0} value={item.weight}
+                      onChange={(e) => updateItem(item.id, 'weight', Number(e.target.value))} />
+                  </td>
+                  <td>
+                    <input value={item.notes} placeholder="Observações"
+                      onChange={(e) => updateItem(item.id, 'notes', e.target.value)} />
                   </td>
                   <td>
                     <input
-                      type="number"
-                      min={0}
-                      value={item.weight}
-                      onChange={(e) => updateItem(item.id, 'weight', Number(e.target.value))}
+                      value={item.diceExpr ?? ''}
+                      placeholder="Ex: 2d6+3+Luta"
+                      onChange={(e) => updateItem(item.id, 'diceExpr', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRoll(item)}
+                      title="Expressão de dado: NdM+bônus+Perícia (ex: 2d6+3+Luta)"
                     />
-                  </td>
-                  <td>
-                    <input
-                      value={item.notes}
-                      placeholder="Observações"
-                      onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={item.diceType ?? ''}
-                      onChange={(e) => updateItem(item.id, 'diceType', e.target.value)}
-                    >
-                      <option value="">—</option>
-                      {DICE_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      value={item.diceSkill ?? ''}
-                      onChange={(e) => updateItem(item.id, 'diceSkill', e.target.value)}
-                      disabled={!item.diceType}
-                    >
-                      <option value="">Nenhuma</option>
-                      {tormenta20.skillList.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    {item.diceType && (
-                      <button
-                        className="btn-ghost btn-sm"
-                        onClick={() => handleRoll(item)}
-                        title={`Rolar ${item.diceType}`}
-                        style={{ fontSize: 13, marginRight: 4 }}
-                      >
+                    {item.diceExpr?.trim() && (
+                      <button className="btn-ghost btn-sm" onClick={() => handleRoll(item)}
+                        title="Rolar" style={{ fontSize: 13, marginRight: 2 }}>
                         🎲
                       </button>
                     )}
-                    <button
-                      className="btn-ghost btn-sm"
-                      onClick={() => removeItem(item.id)}
-                      title="Remover"
-                      style={{ color: 'var(--danger)', padding: '2px 6px' }}
-                    >
+                    <button className="btn-ghost btn-sm" onClick={() => removeItem(item.id)}
+                      title="Remover" style={{ color: 'var(--danger)', padding: '2px 6px' }}>
                       ✕
                     </button>
                   </td>
@@ -180,6 +119,9 @@ export default function EquipmentTab({ characterName }: Props) {
               ))}
             </tbody>
           </table>
+          <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 8 }}>
+            Expressão de dado: use <code style={{ color: 'var(--gold)' }}>NdM+número+NomePerícia</code> — ex: <code style={{ color: 'var(--gold)' }}>2d6+3+Luta</code>
+          </p>
         </div>
       )}
     </div>
