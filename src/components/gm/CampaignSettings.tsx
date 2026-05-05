@@ -6,7 +6,6 @@ interface Props {
 
 export default function CampaignSettings({ onClose }: Props) {
   const campaign = useStore((s) => s.campaign);
-  const updateSettings = useStore((s) => s.updateSettings);
   const leaveCampaign = useStore((s) => s.leaveCampaign);
 
   if (!campaign) return null;
@@ -51,26 +50,6 @@ export default function CampaignSettings({ onClose }: Props) {
           <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 6 }}>
             Compartilhe este código com os jogadores para que entrem na campanha.
           </p>
-        </div>
-
-        {/* Settings */}
-        <div style={{ marginBottom: 24 }}>
-          <p className="sec-title">Mecânicas</p>
-          <label
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              cursor: 'pointer', padding: '8px 0',
-              fontSize: 14, color: 'var(--text)',
-              textTransform: 'none', letterSpacing: 'normal',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={campaign.settings.sanityEnabled}
-              onChange={(e) => updateSettings({ sanityEnabled: e.target.checked })}
-            />
-            Habilitar Sanidade para esta campanha
-          </label>
         </div>
 
         {/* Danger zone */}

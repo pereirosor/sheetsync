@@ -3,6 +3,7 @@ import type {
   Campaign,
   CampaignSettings,
   Character,
+  DiceRollEntry,
   GMCharacterFormData,
   Role,
   SyncMessage,
@@ -20,6 +21,8 @@ const generateCode = (): string => {
 };
 
 const genId = () => Math.random().toString(36).slice(2, 9);
+
+const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
 const saveCampaign = (c: Campaign) =>
   localStorage.setItem(`sheetsync_campaign_${c.code}`, JSON.stringify(c));
@@ -103,6 +106,7 @@ interface AppState {
   characters: Record<string, Character>;
   channel: BroadcastChannel | null;
   toasts: ToastItem[];
+  diceLog: DiceRollEntry[];
 
   initChannel: () => void;
   createCampaign: () => void;
@@ -122,6 +126,7 @@ interface AppState {
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
   toggleNPCInScene: (name: string) => void;
+  rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -132,6 +137,7 @@ export const useStore = create<AppState>((set, get) => ({
   characters: {},
   channel: null,
   toasts: [],
+  diceLog: [],
 
   initChannel: () => {
     if (get().channel) return;
@@ -375,6 +381,12 @@ export const useStore = create<AppState>((set, get) => ({
         set({ campaign: updated });
         break;
       }
+      case 'DICE_ROLL': {
+        const { rollerName, label, diceExpr, result, modifier, total } = msg.payload;
+        const entry: DiceRollEntry = { id: genId(), rollerName, label, diceExpr, result, modifier, total, timestamp: Date.now() };
+        set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
+        break;
+      }
     }
   },
 
@@ -533,5 +545,24 @@ export const useStore = create<AppState>((set, get) => ({
 
   removeToast: (id: string) => {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
+
+  rollDice: (entry) => {
+    const { campaign, channel, addToast } = get();
+    if (!campaign) return;
+    const full: DiceRollEntry = { ...entry, id: genId(), timestamp: Date.now() };
+    set((s) => ({ diceLog: [full, ...s.diceLog].slice(0, 100) }));
+    const sign = entry.modifier >= 0 ? '+' : '';
+    addToast(
+      `${entry.label}: ${entry.diceExpr} = ${entry.result}${sign}${entry.modifier} = ${entry.total}`,
+      'info',
+    );
+    if (channel) {
+      const msg: SyncMessage = {
+        type: 'DICE_ROLL',
+        payload: { campaignCode: campaign.code, ...entry },
+      };
+      channel.postMessage(msg);
+    }
   },
 }));

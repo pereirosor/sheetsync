@@ -3,12 +3,14 @@ import { useStore } from '../../store';
 import PlayerCard from './PlayerCard';
 import CampaignSettings from './CampaignSettings';
 import GMCharactersTab from './GMCharactersTab';
+import DiceLog from '../ui/DiceLog';
 
 type GMTab = 'scene' | 'characters';
 
 export default function GMPanel() {
   const campaign = useStore((s) => s.campaign);
   const characters = useStore((s) => s.characters);
+  const diceLog = useStore((s) => s.diceLog);
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
@@ -131,6 +133,7 @@ export default function GMPanel() {
                 )}
               </div>
             )}
+            <DiceLog entries={diceLog} />
           </>
         )}
 

@@ -1,11 +1,15 @@
 import { useStore } from '../../store';
 import type { SpellItem } from '../../types';
+import tormenta20, { skillTotal } from '../../systems/tormenta20';
 
 interface Props {
   characterName: string;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
+const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
+
+const DICE_TYPES = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
 
 const emptySpell = (): SpellItem => ({
   id: genId(),
@@ -21,6 +25,7 @@ const emptySpell = (): SpellItem => ({
 export default function SpellsTab({ characterName }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
+  const rollDice = useStore((s) => s.rollDice);
 
   if (!char) return null;
 
@@ -32,6 +37,29 @@ export default function SpellsTab({ characterName }: Props) {
 
   const updateSpell = (id: string, field: keyof SpellItem, value: string | number) => {
     setSpells(char.spells.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  };
+
+  const handleRoll = (spell: SpellItem) => {
+    if (!spell.diceType) return;
+    const sides = parseInt(spell.diceType.slice(1), 10);
+    const result = rollDie(sides);
+    let modifier = 0;
+    if (spell.diceSkill) {
+      const skillDef = tormenta20.skillList.find((s) => s.id === spell.diceSkill);
+      if (skillDef) {
+        const attrVal = char.attributes[skillDef.attribute];
+        const trained = char.skills[spell.diceSkill] ?? false;
+        modifier = skillTotal(attrVal, trained, char.level);
+      }
+    }
+    rollDice({
+      rollerName: char.name || characterName,
+      label: spell.name || 'Magia',
+      diceExpr: `1${spell.diceType}`,
+      result,
+      modifier,
+      total: result + modifier,
+    });
   };
 
   return (
@@ -117,6 +145,41 @@ export default function SpellsTab({ characterName }: Props) {
                   onChange={(e) => updateSpell(spell.id, 'description', e.target.value)}
                   style={{ minHeight: 60 }}
                 />
+              </div>
+              {/* Dice config */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+                <div className="form-row" style={{ flex: '0 0 auto', minWidth: 80 }}>
+                  <label>Dado</label>
+                  <select
+                    value={spell.diceType ?? ''}
+                    onChange={(e) => updateSpell(spell.id, 'diceType', e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {DICE_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="form-row" style={{ flex: '1 1 140px', minWidth: 140 }}>
+                  <label>Perícia (bônus)</label>
+                  <select
+                    value={spell.diceSkill ?? ''}
+                    onChange={(e) => updateSpell(spell.id, 'diceSkill', e.target.value)}
+                    disabled={!spell.diceType}
+                  >
+                    <option value="">Nenhuma</option>
+                    {tormenta20.skillList.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {spell.diceType && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleRoll(spell)}
+                    style={{ alignSelf: 'flex-end', marginBottom: 1 }}
+                  >
+                    🎲 Rolar {spell.diceType}
+                  </button>
+                )}
               </div>
             </div>
           ))}
