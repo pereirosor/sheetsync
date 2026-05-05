@@ -42,8 +42,7 @@ export interface EquipmentItem {
   bonusOrDamage: string;
   weight: number;
   notes: string;
-  diceType?: string;
-  diceSkill?: string;
+  diceExpr?: string;
 }
 
 export interface SpellItem {
@@ -55,8 +54,7 @@ export interface SpellItem {
   range: string;
   duration: string;
   description: string;
-  diceType?: string;
-  diceSkill?: string;
+  diceExpr?: string;
 }
 
 export interface DiceRollEntry {
@@ -64,8 +62,7 @@ export interface DiceRollEntry {
   rollerName: string;
   label: string;
   diceExpr: string;
-  result: number;
-  modifier: number;
+  breakdown: string;
   total: number;
   timestamp: number;
 }
@@ -148,7 +145,7 @@ export type SyncMessage =
   | { type: 'GM_VITAL_UPDATE'; payload: { campaignCode: string; characterName: string; field: VitalKey; delta: number } }
   | { type: 'REST_APPLIED'; payload: { campaignCode: string; characterName: string; restType: 'short' | 'long' } }
   | { type: 'CAMPAIGN_SETTINGS_UPDATE'; payload: { campaignCode: string; settings: CampaignSettings } }
-  | { type: 'DICE_ROLL'; payload: { campaignCode: string } & Omit<DiceRollEntry, 'id' | 'timestamp'> };
+  | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } };
 
 export interface ToastItem {
   id: string;
