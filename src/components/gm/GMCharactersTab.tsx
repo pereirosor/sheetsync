@@ -2,6 +2,10 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../../store';
 import type { Character, GMCharacterFormData } from '../../types';
 import CreateNPCModal from './CreateNPCModal';
+import tormenta20, { skillTotal } from '../../systems/tormenta20';
+
+const DICE_TYPES = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
 type EditTarget = GMCharacterFormData & { originalName: string };
 
@@ -47,9 +51,12 @@ export default function GMCharactersTab() {
   const updateGMCharacter = useStore((s) => s.updateGMCharacter);
   const deleteGMCharacter = useStore((s) => s.deleteGMCharacter);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
+  const rollDice = useStore((s) => s.rollDice);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [npcDiceType, setNpcDiceType] = useState<Record<string, string>>({});
+  const [npcDiceSkill, setNpcDiceSkill] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterRace, setFilterRace] = useState('');
@@ -269,6 +276,55 @@ export default function GMCharactersTab() {
                   </p>
                 </div>
               )}
+
+              {/* Quick dice roller */}
+              <div style={{ marginTop: 12, display: 'flex', gap: 6, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em', width: '100%', marginBottom: 2 }}>
+                  Rolagem Rápida
+                </div>
+                <select
+                  value={npcDiceType[char.name] ?? ''}
+                  onChange={(e) => setNpcDiceType((p) => ({ ...p, [char.name]: e.target.value }))}
+                  style={{ fontSize: 12, padding: '4px 6px', width: 70 }}
+                >
+                  <option value="">Dado</option>
+                  {DICE_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <select
+                  value={npcDiceSkill[char.name] ?? ''}
+                  onChange={(e) => setNpcDiceSkill((p) => ({ ...p, [char.name]: e.target.value }))}
+                  style={{ fontSize: 12, padding: '4px 6px', flex: 1, minWidth: 100 }}
+                  disabled={!npcDiceType[char.name]}
+                >
+                  <option value="">Perícia (opcional)</option>
+                  {tormenta20.skillList.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={!npcDiceType[char.name]}
+                  onClick={() => {
+                    const dt = npcDiceType[char.name];
+                    if (!dt) return;
+                    const sides = parseInt(dt.slice(1), 10);
+                    const result = rollDie(sides);
+                    let modifier = 0;
+                    const skillId = npcDiceSkill[char.name];
+                    if (skillId) {
+                      const skillDef = tormenta20.skillList.find((s) => s.id === skillId);
+                      if (skillDef) {
+                        const attrVal = char.attributes[skillDef.attribute];
+                        modifier = skillTotal(attrVal, false, char.level);
+                      }
+                    }
+                    const label = skillId
+                      ? (tormenta20.skillList.find((s) => s.id === skillId)?.name ?? dt)
+                      : dt;
+                    rollDice({ rollerName: char.name, label, diceExpr: `1${dt}`, result, modifier, total: result + modifier });
+                  }}
+                >
+                  🎲 Rolar
+                </button>
+              </div>
             </div>
           </div>
         ))}

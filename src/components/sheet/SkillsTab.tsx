@@ -14,9 +14,12 @@ const ATTR_ABBR: Record<string, string> = {
   charisma: 'CAR',
 };
 
+const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
+
 export default function SkillsTab({ characterName }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
+  const rollDice = useStore((s) => s.rollDice);
 
   if (!char) return null;
 
@@ -24,6 +27,11 @@ export default function SkillsTab({ characterName }: Props) {
     updateCharacter(characterName, {
       skills: { ...char.skills, [id]: !char.skills[id] },
     });
+  };
+
+  const handleRoll = (skillName: string, modifier: number) => {
+    const result = rollDie(20);
+    rollDice({ rollerName: char.name || characterName, label: skillName, diceExpr: '1d20', result, modifier, total: result + modifier });
   };
 
   return (
@@ -36,6 +44,7 @@ export default function SkillsTab({ characterName }: Props) {
             <th style={{ textAlign: 'left', color: 'var(--text2)', fontSize: 10, letterSpacing: '.05em', textTransform: 'uppercase', paddingBottom: 6 }}>Perícia</th>
             <th style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 10, letterSpacing: '.05em', textTransform: 'uppercase', paddingBottom: 6 }}>Atributo</th>
             <th style={{ textAlign: 'right', color: 'var(--text2)', fontSize: 10, letterSpacing: '.05em', textTransform: 'uppercase', paddingBottom: 6 }}>Bônus</th>
+            <th style={{ width: 36 }} />
           </tr>
         </thead>
         <tbody>
@@ -60,6 +69,16 @@ export default function SkillsTab({ characterName }: Props) {
                 </td>
                 <td className="skill-bonus">
                   {total >= 0 ? '+' : ''}{total}
+                </td>
+                <td>
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={() => handleRoll(skill.name, total)}
+                    title={`Rolar d20 + ${total >= 0 ? '+' : ''}${total}`}
+                    style={{ padding: '2px 6px', fontSize: 13 }}
+                  >
+                    🎲
+                  </button>
                 </td>
               </tr>
             );
