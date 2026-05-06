@@ -149,6 +149,7 @@ export interface ClassInfo {
   proficiencies: string;
   level1Abilities: string[];
   abilities: ClassAbility[];
+  trainedSkills: string[];
 }
 
 export interface GameSystem {

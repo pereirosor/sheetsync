@@ -21,6 +21,13 @@ export default function IdentityTab({ characterName }: Props) {
   const upd = (field: string, value: unknown) =>
     updateCharacter(characterName, { [field]: value } as never);
 
+  const resolveSkillId = (benefitName: string): string | null => {
+    const direct = tormenta20.skillList.find((s) => s.name === benefitName);
+    if (direct) return direct.id;
+    if (benefitName.startsWith('Ofício')) return 'oficio';
+    return null;
+  };
+
   const handleRaceChange = (newRace: string) => {
     const oldMods = tormenta20.raceData[char.race]?.attributeMods;
     const newMods = tormenta20.raceData[newRace]?.attributeMods;
@@ -49,13 +56,27 @@ export default function IdentityTab({ characterName }: Props) {
 
   const handleClassChange = (newClass: string) => {
     const cd = tormenta20.classData[newClass];
-    if (!cd) { upd('class', newClass); return; }
+    const originSkillIds = new Set(
+      (char.originBenefits ?? []).map(resolveSkillId).filter(Boolean) as string[]
+    );
+    const newSkills = { ...char.skills };
+    const oldCd = tormenta20.classData[char.class];
+    if (oldCd) {
+      for (const id of oldCd.trainedSkills) {
+        if (!originSkillIds.has(id)) newSkills[id] = false;
+      }
+    }
+    if (cd) {
+      for (const id of cd.trainedSkills) newSkills[id] = true;
+    }
+    if (!cd) { updateCharacter(characterName, { class: newClass, skills: newSkills } as never); return; }
     const conMod = calcMod2(char.attributes.constitution);
     const lvl = char.level;
     const newHpMax = cd.hpBase + lvl * conMod + (lvl - 1) * cd.hpPerLevel;
     const newManaMax = cd.mpPerLevel * lvl;
     updateCharacter(characterName, {
       class: newClass,
+      skills: newSkills,
       vitals: {
         ...char.vitals,
         hp: { current: Math.min(char.vitals.hp.current, newHpMax), max: newHpMax },
@@ -154,10 +175,23 @@ export default function IdentityTab({ characterName }: Props) {
         const benefits = tormenta20.originData[char.origin];
         const selected: string[] = char.originBenefits ?? [];
         const toggle = (b: string) => {
-          const next = selected.includes(b)
+          const isChecking = !selected.includes(b) && selected.length < 2;
+          const isUnchecking = selected.includes(b);
+          if (!isChecking && !isUnchecking) return;
+          const next = isUnchecking
             ? selected.filter((x) => x !== b)
-            : selected.length < 2 ? [...selected, b] : selected;
-          upd('originBenefits', next);
+            : [...selected, b];
+          const skillId = resolveSkillId(b);
+          const updates: Record<string, unknown> = { originBenefits: next };
+          if (skillId) {
+            const classSkills = tormenta20.classData[char.class]?.trainedSkills ?? [];
+            if (isChecking) {
+              updates.skills = { ...char.skills, [skillId]: true };
+            } else if (!classSkills.includes(skillId)) {
+              updates.skills = { ...char.skills, [skillId]: false };
+            }
+          }
+          updateCharacter(characterName, updates as never);
         };
         return (
           <div style={{ fontSize: '0.85rem', padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>

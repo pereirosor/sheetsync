@@ -162,6 +162,7 @@ const tormenta20: GameSystem = {
       hpBase: 8, hpPerLevel: 2, mpPerLevel: 6,
       proficiencies: 'Nenhuma',
       level1Abilities: ['Caminho do Arcanista', 'Magias (1º círculo)'],
+      trainedSkills: ['misticismo', 'vontade'],
       abilities: [
         { level: 1, name: 'Caminho do Arcanista', description: 'Escolha um caminho arcano (Mago, Ilusionista, Necromante etc.) que define seus poderes exclusivos.' },
         { level: 1, name: 'Magias (1º círculo)', description: 'Você pode lançar magias arcanas de 1º círculo. Acessa círculos maiores a cada dois níveis.' },
@@ -172,6 +173,7 @@ const tormenta20: GameSystem = {
       hpBase: 24, hpPerLevel: 6, mpPerLevel: 3,
       proficiencies: 'Armas marciais, escudos',
       level1Abilities: ['Fúria +2'],
+      trainedSkills: ['fortitude', 'luta', 'percepcao'],
       abilities: [
         { level: 1, name: 'Fúria +2', description: 'Gaste 2 PM: receba +4 em ataques e dano, +ConMod PV temporários, mas sofra –5 na Defesa e não possa lançar magias. Aumenta a cada 6 níveis.' },
         { level: 3, name: 'Mente de Batalha', description: 'Enquanto em Fúria, você é imune a efeitos mentais (medo, encantamento etc.).' },
@@ -185,6 +187,7 @@ const tormenta20: GameSystem = {
       hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
       proficiencies: 'Armas marciais',
       level1Abilities: ['Inspiração +1', 'Magias (1º círculo)'],
+      trainedSkills: ['atuacao', 'misticismo'],
       abilities: [
         { level: 1, name: 'Inspiração +1', description: 'Gaste 1 PM: um aliado em alcance curto recebe +1 em qualquer teste até o fim da cena.' },
         { level: 1, name: 'Magias (1º círculo)', description: 'Você pode lançar magias arcanas de 1º círculo.' },
@@ -198,6 +201,7 @@ const tormenta20: GameSystem = {
       hpBase: 16, hpPerLevel: 4, mpPerLevel: 3,
       proficiencies: 'Armas marciais',
       level1Abilities: ['Audácia', 'Insolência'],
+      trainedSkills: ['iniciativa', 'jogatina'],
       abilities: [
         { level: 1, name: 'Audácia', description: 'Some seu bônus de CAR na Iniciativa. Sem armadura ou escudo pesado, some também na Defesa.' },
         { level: 1, name: 'Insolência', description: 'Gaste 1 PM: realize uma ação de movimento adicional no turno. Uma vez por rodada.' },
@@ -210,6 +214,7 @@ const tormenta20: GameSystem = {
       hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
       proficiencies: 'Armas marciais, escudos',
       level1Abilities: ['Marca da Presa +1d4', 'Rastreador'],
+      trainedSkills: ['sobrevivencia'],
       abilities: [
         { level: 1, name: 'Marca da Presa +1d4', description: 'Gaste 1 PM: marque uma criatura. Seus ataques contra ela causam +1d4 de dano extra. A marca dura a cena.' },
         { level: 1, name: 'Rastreador', description: 'Você se move a velocidade normal ao rastrear e pode rastrear à noite sem penalidade.' },
@@ -224,6 +229,7 @@ const tormenta20: GameSystem = {
       hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
       proficiencies: 'Armas marciais, armaduras pesadas, escudos',
       level1Abilities: ['Baluarte +2', 'Código de Honra'],
+      trainedSkills: ['cavalgar', 'guerra'],
       abilities: [
         { level: 1, name: 'Código de Honra', description: 'Você nunca pode atacar um alvo indefeso nem abandonar um aliado em perigo.' },
         { level: 1, name: 'Baluarte +2', description: 'Gaste 1 PM: você (e aliados adjacentes a partir do 7º nível) recebem +2 na Defesa e em testes de resistência contra efeitos sobrenaturais.' },
@@ -237,6 +243,7 @@ const tormenta20: GameSystem = {
       hpBase: 16, hpPerLevel: 4, mpPerLevel: 5,
       proficiencies: 'Armaduras pesadas, escudos',
       level1Abilities: ['Devoto', 'Magias (1º círculo)'],
+      trainedSkills: ['misticismo', 'religiao'],
       abilities: [
         { level: 1, name: 'Devoto', description: 'Você serve a uma divindade, seguindo suas obrigações e restrições em troca de Poderes Concedidos.' },
         { level: 1, name: 'Magias (1º círculo)', description: 'Você lança magias divinas de 1º círculo. Acessa círculos maiores a cada dois níveis.' },
@@ -247,6 +254,7 @@ const tormenta20: GameSystem = {
       hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
       proficiencies: 'Escudos',
       level1Abilities: ['Devoto', 'Empatia Selvagem', 'Magias (1º círculo)'],
+      trainedSkills: ['misticismo', 'sobrevivencia'],
       abilities: [
         { level: 1, name: 'Devoto', description: 'Você serve a uma divindade da natureza (geralmente Allihanna), seguindo suas obrigações em troca de Poderes Concedidos.' },
         { level: 1, name: 'Empatia Selvagem', description: 'Você pode se comunicar com animais. Com um teste de Adestramento, pode calmá-los ou pedir ajuda simples.' },
@@ -259,6 +267,7 @@ const tormenta20: GameSystem = {
       hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
       proficiencies: 'Armas marciais, armaduras pesadas, escudos',
       level1Abilities: ['Ataque Especial +4'],
+      trainedSkills: ['luta', 'pontaria'],
       abilities: [
         { level: 1, name: 'Ataque Especial +4', description: 'Gaste 1 PM: receba +4 em testes de ataque ou rolagens de dano (escolha antes de rolar). A cada 4 níveis, gaste +1 PM para +4 adicionais.' },
         { level: 3, name: 'Durão', description: 'Gaste 2 PM quando sofrer dano: reduza o dano à metade.' },
@@ -270,6 +279,7 @@ const tormenta20: GameSystem = {
       hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
       proficiencies: 'Nenhuma',
       level1Abilities: ['Engenhosidade', 'Protótipo'],
+      trainedSkills: ['oficio', 'vontade'],
       abilities: [
         { level: 1, name: 'Engenhosidade', description: 'Gaste 2 PM ao fazer um teste de perícia: receba bônus igual ao modificador de INT. Não funciona em testes de ataque.' },
         { level: 1, name: 'Protótipo', description: 'Você começa com um item superior com uma modificação ou 10 itens alquímicos (até T$ 500).' },
@@ -287,6 +297,7 @@ const tormenta20: GameSystem = {
       hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
       proficiencies: 'Nenhuma',
       level1Abilities: ['Ataque Furtivo +1d6', 'Especialista'],
+      trainedSkills: ['ladinagem', 'reflexos'],
       abilities: [
         { level: 1, name: 'Ataque Furtivo +1d6', description: 'Uma vez por rodada, quando atinge um alvo desprevenido ou flanqueado, cause +1d6 de dano extra. Aumenta +1d6 a cada dois níveis.' },
         { level: 1, name: 'Especialista', description: 'Escolha perícias treinadas (igual ao bônus de INT): ao usá-las, gaste 1 PM para dobrar o bônus de treinamento.' },
@@ -301,6 +312,7 @@ const tormenta20: GameSystem = {
       hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
       proficiencies: 'Nenhuma',
       level1Abilities: ['Briga (1d6)', 'Golpe Relâmpago'],
+      trainedSkills: ['fortitude', 'luta'],
       abilities: [
         { level: 1, name: 'Briga (1d6)', description: 'Seus ataques desarmados causam 1d6 de dano e podem ser letais ou não letais sem penalidade.' },
         { level: 1, name: 'Golpe Relâmpago', description: 'Ao usar a ação atacar desarmado, gaste 1 PM para realizar um ataque desarmado adicional.' },
@@ -316,6 +328,7 @@ const tormenta20: GameSystem = {
       hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
       proficiencies: 'Armas marciais, armaduras pesadas, escudos',
       level1Abilities: ['Autoconfiança', 'Espólio', 'Orgulho'],
+      trainedSkills: ['vontade'],
       abilities: [
         { level: 1, name: 'Autoconfiança', description: 'Some seu bônus de CAR em vez de DES na Defesa (exceto de armadura pesada).' },
         { level: 1, name: 'Espólio', description: 'Você recebe um item a sua escolha com preço de até T$ 2.000.' },
@@ -329,6 +342,7 @@ const tormenta20: GameSystem = {
       hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
       proficiencies: 'Armas marciais, armaduras pesadas, escudos',
       level1Abilities: ['Abençoado', 'Código do Herói', 'Golpe Divino (+1d8)'],
+      trainedSkills: ['luta', 'vontade'],
       abilities: [
         { level: 1, name: 'Abençoado', description: 'Some seu bônus de CAR ao total de PM. Torne-se devoto de uma divindade bondosa e ganhe seus Poderes Concedidos.' },
         { level: 1, name: 'Código do Herói', description: 'Sempre mantenha sua palavra, nunca recuse ajuda a inocentes e jamais minta, trapaceie ou roube. Violar o código remove todos os seus PM até o dia seguinte.' },
