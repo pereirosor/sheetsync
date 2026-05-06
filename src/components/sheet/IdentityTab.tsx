@@ -100,20 +100,34 @@ export default function IdentityTab({ characterName }: Props) {
 
       {(char.class && tormenta20.classData[char.class]) && (() => {
         const cd = tormenta20.classData[char.class];
+        const gained = cd.abilities.filter((a) => a.level <= char.level);
         return (
-          <div style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
-            <b>PV:</b> {cd.hpBase}+Con (+{cd.hpPerLevel}/nível) &nbsp;
-            <b>PM:</b> {cd.mpPerLevel}/nível<br />
-            <b>Proficiências:</b> {cd.proficiencies}<br />
-            <b>Habilidades:</b> {cd.level1Abilities.join(' · ')}
-          </div>
+          <>
+            <div style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+              <b>PV:</b> {cd.hpBase}+Con (+{cd.hpPerLevel}/nível) &nbsp;
+              <b>PM:</b> {cd.mpPerLevel}/nível<br />
+              <b>Proficiências:</b> {cd.proficiencies}
+            </div>
+            {gained.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p className="sec-title">Habilidades de Classe</p>
+                {gained.map((a) => (
+                  <div key={`${a.level}-${a.name}`} style={{ fontSize: '0.82rem', lineHeight: 1.5, padding: '5px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>Nível {a.level}</span><br />
+                    <b>{a.name}</b><br />
+                    <span style={{ color: 'var(--muted)' }}>{a.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         );
       })()}
 
       <div className="g3">
         <div className="form-row">
           <label>Origem</label>
-          <select value={char.origin} onChange={(e) => upd('origin', e.target.value)}>
+          <select value={char.origin} onChange={(e) => updateCharacter(characterName, { origin: e.target.value, originBenefits: [] } as never)}>
             <option value="">— Selecione —</option>
             {tormenta20.originList.map((o) => (
               <option key={o} value={o}>{o}</option>
@@ -135,6 +149,42 @@ export default function IdentityTab({ characterName }: Props) {
           </select>
         </div>
       </div>
+
+      {(char.origin && tormenta20.originData[char.origin]) && (() => {
+        const benefits = tormenta20.originData[char.origin];
+        const selected: string[] = char.originBenefits ?? [];
+        const toggle = (b: string) => {
+          const next = selected.includes(b)
+            ? selected.filter((x) => x !== b)
+            : selected.length < 2 ? [...selected, b] : selected;
+          upd('originBenefits', next);
+        };
+        return (
+          <div style={{ fontSize: '0.85rem', padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+            <b style={{ display: 'block', marginBottom: 2 }}>Benefícios de Origem</b>
+            <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+              Escolha 2 ({selected.length}/2 marcados)
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+              {benefits.map((b) => {
+                const checked = selected.includes(b);
+                const disabled = !checked && selected.length >= 2;
+                return (
+                  <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => toggle(b)}
+                    />
+                    {b}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="g3">
         <div className="form-row">
