@@ -39,6 +39,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   ...ch,
   owner: ch.owner ?? 'player',
   inScene: ch.inScene ?? false,
+  originBenefits: ch.originBenefits ?? [],
 });
 
 const loadCharacter = (campaignCode: string, name: string): Character | null => {
@@ -94,6 +95,7 @@ export const createDefaultCharacter = (campaignCode: string, name: string): Char
   equipment: [],
   spells: [],
   notes: '',
+  originBenefits: [],
   owner: 'player',
   inScene: false,
 });
@@ -449,6 +451,7 @@ export const useStore = create<AppState>((set, get) => ({
       equipment: [],
       spells: [],
       notes: '',
+      originBenefits: [],
       actions: data.actions,
       items: data.items,
       owner: 'gm',

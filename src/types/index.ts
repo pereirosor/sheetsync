@@ -90,6 +90,7 @@ export interface Character {
   equipment: EquipmentItem[];
   spells: SpellItem[];
   notes: string;
+  originBenefits: string[];
   actions?: string;
   items?: string;
   owner: 'player' | 'gm';
@@ -129,10 +130,44 @@ export interface GMCharacterFormData {
   items: string;
 }
 
+export interface RaceInfo {
+  attributeBonuses: string;
+  abilities: string[];
+  attributeMods?: Partial<Record<AttributeKey, number>>;
+}
+
+export interface ClassAbility {
+  level: number;
+  name: string;
+  description: string;
+}
+
+export interface SkillChoiceGroup {
+  count: number;
+  options: string[];
+}
+
+export interface ClassInfo {
+  hpBase: number;
+  hpPerLevel: number;
+  mpPerLevel: number;
+  proficiencies: string;
+  level1Abilities: string[];
+  abilities: ClassAbility[];
+  trainedSkills: string[];
+  skillChoices: SkillChoiceGroup[];
+}
+
 export interface GameSystem {
   systemId: string;
   name: string;
   classList: string[];
+  originList: string[];
+  originData: Record<string, string[]>;
+  deityList: string[];
+  raceList: string[];
+  raceData: Record<string, RaceInfo>;
+  classData: Record<string, ClassInfo>;
   skillList: SkillDef[];
   vitalFields: VitalFieldDef[];
   shortRestFormula: (char: Character, campaign: Campaign) => Partial<Record<VitalKey, number>>;
