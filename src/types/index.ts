@@ -132,6 +132,7 @@ export interface GMCharacterFormData {
 export interface RaceInfo {
   attributeBonuses: string;
   abilities: string[];
+  attributeMods?: Partial<Record<AttributeKey, number>>;
 }
 
 export interface ClassInfo {

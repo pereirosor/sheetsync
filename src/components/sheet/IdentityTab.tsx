@@ -1,5 +1,5 @@
 import { useStore } from '../../store';
-import tormenta20 from '../../systems/tormenta20';
+import tormenta20, { calcMod2 } from '../../systems/tormenta20';
 
 interface Props {
   characterName: string;
@@ -21,6 +21,49 @@ export default function IdentityTab({ characterName }: Props) {
   const upd = (field: string, value: unknown) =>
     updateCharacter(characterName, { [field]: value } as never);
 
+  const handleRaceChange = (newRace: string) => {
+    const oldMods = tormenta20.raceData[char.race]?.attributeMods;
+    const newMods = tormenta20.raceData[newRace]?.attributeMods;
+    const newAttrs = { ...char.attributes };
+    if (oldMods) {
+      for (const [k, v] of Object.entries(oldMods) as [string, number][])
+        (newAttrs as Record<string, number>)[k] -= v;
+    }
+    if (newMods) {
+      for (const [k, v] of Object.entries(newMods) as [string, number][])
+        (newAttrs as Record<string, number>)[k] += v;
+    }
+    const updates: Record<string, unknown> = { race: newRace, attributes: newAttrs };
+    const cd = tormenta20.classData[char.class];
+    if (cd) {
+      const conMod = calcMod2(newAttrs.constitution);
+      const lvl = char.level;
+      const newHpMax = cd.hpBase + lvl * conMod + (lvl - 1) * cd.hpPerLevel;
+      updates.vitals = {
+        ...char.vitals,
+        hp: { current: Math.min(char.vitals.hp.current, newHpMax), max: newHpMax },
+      };
+    }
+    updateCharacter(characterName, updates as never);
+  };
+
+  const handleClassChange = (newClass: string) => {
+    const cd = tormenta20.classData[newClass];
+    if (!cd) { upd('class', newClass); return; }
+    const conMod = calcMod2(char.attributes.constitution);
+    const lvl = char.level;
+    const newHpMax = cd.hpBase + lvl * conMod + (lvl - 1) * cd.hpPerLevel;
+    const newManaMax = cd.mpPerLevel * lvl;
+    updateCharacter(characterName, {
+      class: newClass,
+      vitals: {
+        ...char.vitals,
+        hp: { current: Math.min(char.vitals.hp.current, newHpMax), max: newHpMax },
+        mana: { current: Math.min(char.vitals.mana.current, newManaMax), max: newManaMax },
+      },
+    } as never);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="g3">
@@ -30,7 +73,7 @@ export default function IdentityTab({ characterName }: Props) {
         </div>
         <div className="form-row">
           <label>Raça</label>
-          <select value={char.race} onChange={(e) => upd('race', e.target.value)}>
+          <select value={char.race} onChange={(e) => handleRaceChange(e.target.value)}>
             <option value="">— Selecione —</option>
             {tormenta20.raceList.map((r) => (
               <option key={r} value={r}>{r}</option>
@@ -39,7 +82,7 @@ export default function IdentityTab({ characterName }: Props) {
         </div>
         <div className="form-row">
           <label>Classe</label>
-          <select value={char.class} onChange={(e) => upd('class', e.target.value)}>
+          <select value={char.class} onChange={(e) => handleClassChange(e.target.value)}>
             <option value="">— Selecione —</option>
             {tormenta20.classList.map((c) => (
               <option key={c} value={c}>{c}</option>
