@@ -65,6 +65,11 @@ export default function IdentityTab({ characterName }: Props) {
       for (const id of oldCd.trainedSkills) {
         if (!originSkillIds.has(id)) newSkills[id] = false;
       }
+      for (const group of oldCd.skillChoices) {
+        for (const id of group.options) {
+          if (!originSkillIds.has(id)) newSkills[id] = false;
+        }
+      }
     }
     if (cd) {
       for (const id of cd.trainedSkills) newSkills[id] = true;
@@ -139,6 +144,47 @@ export default function IdentityTab({ characterName }: Props) {
                     <span style={{ color: 'var(--muted)' }}>{a.description}</span>
                   </div>
                 ))}
+              </div>
+            )}
+            {cd.skillChoices.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p className="sec-title">Perícias de Classe</p>
+                {cd.skillChoices.map((group, gi) => {
+                  const groupChecked = group.options.filter((id) => !!char.skills[id]);
+                  const full = groupChecked.length >= group.count;
+                  return (
+                    <div key={gi} style={{ fontSize: '0.85rem', padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+                      <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+                        Escolha {group.count} ({groupChecked.length}/{group.count} marcados)
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                        {group.options.map((id) => {
+                          const skill = tormenta20.skillList.find((s) => s.id === id);
+                          const checked = !!char.skills[id];
+                          const disabled = !checked && full;
+                          return (
+                            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={disabled}
+                                onChange={() => {
+                                  if (checked) {
+                                    const inOrigin = (char.originBenefits ?? []).some((b) => resolveSkillId(b) === id);
+                                    if (!inOrigin) upd('skills', { ...char.skills, [id]: false });
+                                  } else {
+                                    upd('skills', { ...char.skills, [id]: true });
+                                  }
+                                }}
+                              />
+                              {skill?.name ?? id}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>

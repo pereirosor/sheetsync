@@ -142,6 +142,11 @@ export interface ClassAbility {
   description: string;
 }
 
+export interface SkillChoiceGroup {
+  count: number;
+  options: string[];
+}
+
 export interface ClassInfo {
   hpBase: number;
   hpPerLevel: number;
@@ -150,6 +155,7 @@ export interface ClassInfo {
   level1Abilities: string[];
   abilities: ClassAbility[];
   trainedSkills: string[];
+  skillChoices: SkillChoiceGroup[];
 }
 
 export interface GameSystem {
