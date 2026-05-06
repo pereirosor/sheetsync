@@ -129,12 +129,28 @@ export interface GMCharacterFormData {
   items: string;
 }
 
+export interface RaceInfo {
+  attributeBonuses: string;
+  abilities: string[];
+}
+
+export interface ClassInfo {
+  hpBase: number;
+  hpPerLevel: number;
+  mpPerLevel: number;
+  proficiencies: string;
+  level1Abilities: string[];
+}
+
 export interface GameSystem {
   systemId: string;
   name: string;
   classList: string[];
   originList: string[];
   deityList: string[];
+  raceList: string[];
+  raceData: Record<string, RaceInfo>;
+  classData: Record<string, ClassInfo>;
   skillList: SkillDef[];
   vitalFields: VitalFieldDef[];
   shortRestFormula: (char: Character, campaign: Campaign) => Partial<Record<VitalKey, number>>;

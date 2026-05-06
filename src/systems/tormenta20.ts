@@ -6,19 +6,8 @@ const tormenta20: GameSystem = {
   systemId: 'tormenta20',
   name: 'Tormenta 20',
   classList: [
-    'Arcanista',
-    'Bárbaro',
-    'Bardo',
-    'Clérigo',
-    'Druida',
-    'Guerreiro',
-    'Inventor',
-    'Ladino',
-    'Paladino',
-    'Ranger',
-    'Lutador',
-    'Nobre',
-    'Caçador de Monstros',
+    'Arcanista', 'Bárbaro', 'Bardo', 'Bucaneiro', 'Caçador', 'Cavaleiro',
+    'Clérigo', 'Druida', 'Guerreiro', 'Inventor', 'Ladino', 'Lutador', 'Nobre', 'Paladino',
   ],
   originList: [
     'Acólito', 'Amigo dos Animais', 'Amnésico', 'Aristocrata', 'Artesão',
@@ -34,6 +23,157 @@ const tormenta20: GameSystem = {
     'Khalmyr', 'Lena', 'Lin-Wu', 'Marah', 'Megalokk', 'Nimb', 'Oceano',
     'Sszzaas', 'Tanna-Toh', 'Tenebra', 'Thwor', 'Thyatis', 'Valkaria', 'Wynna',
   ],
+  raceList: [
+    'Humano', 'Anão', 'Dahllan', 'Elfo', 'Goblin', 'Lefou', 'Minotauro', 'Qareen',
+    'Golem', 'Hynne', 'Kliren', 'Medusa', 'Osteon', 'Sereia/Tritão', 'Sílfide',
+    'Suraggel (Aggelus)', 'Suraggel (Sulfure)', 'Trog',
+  ],
+  raceData: {
+    'Humano': {
+      attributeBonuses: '+2 em três atributos à escolha',
+      abilities: ['Versátil', 'Vallen e Drikka'],
+    },
+    'Anão': {
+      attributeBonuses: 'CON +4, SAB +2, DES –2',
+      abilities: ['Conhecimento das Rochas', 'Devagar e Sempre', 'Duro como Pedra', 'Tradição de Heredrimm'],
+    },
+    'Dahllan': {
+      attributeBonuses: 'SAB +4, DES +2, INT –2',
+      abilities: ['Amiga das Plantas', 'Armadura de Allihanna', 'Empatia Selvagem'],
+    },
+    'Elfo': {
+      attributeBonuses: 'INT +4, DES +2, CON –2',
+      abilities: ['Graça de Glórienn', 'Herança Feérica', 'Sentidos Élficos'],
+    },
+    'Goblin': {
+      attributeBonuses: 'DES +4, INT +2, CAR –2',
+      abilities: ['Engenhoso', 'Espelunqueiro', 'Peste Esguia', 'Rato das Ruas'],
+    },
+    'Lefou': {
+      attributeBonuses: '+2 em três atributos (exceto CAR), CAR –2',
+      abilities: ['Cria da Tormenta', 'Deformidade'],
+    },
+    'Minotauro': {
+      attributeBonuses: 'FOR +4, CON +2, SAB –2',
+      abilities: ['Chifres', 'Couro Rígido', 'Faro', 'Medo de Altura'],
+    },
+    'Qareen': {
+      attributeBonuses: 'CAR +4, INT +2, SAB –2',
+      abilities: ['Desejos', 'Resistência Elemental', 'Tatuagem Mística'],
+    },
+    'Golem': {
+      attributeBonuses: 'FOR +4, CON +2, CAR –2',
+      abilities: ['Canalizar Reparos', 'Chassi', 'Criatura Artificial', 'Espírito Elemental', 'Sem Origem'],
+    },
+    'Hynne': {
+      attributeBonuses: 'DES +4, CAR +2, FOR –2',
+      abilities: ['Arremessador', 'Pequeno e Rechonchudo', 'Sorte Salvadora'],
+    },
+    'Kliren': {
+      attributeBonuses: 'INT +4, CAR +2, FOR –2',
+      abilities: ['Híbrido', 'Lógica Gnômica', 'Ossos Frágeis', 'Vanguardista'],
+    },
+    'Medusa': {
+      attributeBonuses: 'DES +4, CAR +2',
+      abilities: ['Cria de Megalokk', 'Natureza Venenosa', 'Olhar Atordoante'],
+    },
+    'Osteon': {
+      attributeBonuses: '+2 em três atributos (exceto CON), CON –2',
+      abilities: ['Armadura Óssea', 'Memória Póstuma', 'Natureza Esquelética', 'Preço da Não Vida'],
+    },
+    'Sereia/Tritão': {
+      attributeBonuses: '+2 em três atributos à escolha',
+      abilities: ['Canção dos Mares', 'Mestre do Tridente', 'Transformação Anfíbia'],
+    },
+    'Sílfide': {
+      attributeBonuses: 'CAR +4, DES +2, FOR –4',
+      abilities: ['Asas de Borboleta', 'Espírito da Natureza', 'Magia das Fadas'],
+    },
+    'Suraggel (Aggelus)': {
+      attributeBonuses: 'SAB +4, CAR +2',
+      abilities: ['Herança Divina', 'Luz Sagrada'],
+    },
+    'Suraggel (Sulfure)': {
+      attributeBonuses: 'DES +4, INT +2',
+      abilities: ['Herança Divina', 'Sombras Profanas'],
+    },
+    'Trog': {
+      attributeBonuses: 'CON +4, FOR +2, INT –2',
+      abilities: ['Mau Cheiro', 'Mordida', 'Reptiliano', 'Sangue Frio'],
+    },
+  },
+  classData: {
+    'Arcanista': {
+      hpBase: 8, hpPerLevel: 2, mpPerLevel: 6,
+      proficiencies: 'Nenhuma',
+      level1Abilities: ['Caminho do Arcanista', 'Magias (1º círculo)'],
+    },
+    'Bárbaro': {
+      hpBase: 24, hpPerLevel: 6, mpPerLevel: 3,
+      proficiencies: 'Armas marciais, escudos',
+      level1Abilities: ['Fúria +2'],
+    },
+    'Bardo': {
+      hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
+      proficiencies: 'Armas marciais',
+      level1Abilities: ['Inspiração +1', 'Magias (1º círculo)'],
+    },
+    'Bucaneiro': {
+      hpBase: 16, hpPerLevel: 4, mpPerLevel: 3,
+      proficiencies: 'Armas marciais',
+      level1Abilities: ['Audácia', 'Insolência'],
+    },
+    'Caçador': {
+      hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
+      proficiencies: 'Armas marciais, escudos',
+      level1Abilities: ['Marca da Presa +1d4', 'Rastreador'],
+    },
+    'Cavaleiro': {
+      hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
+      proficiencies: 'Armas marciais, armaduras pesadas, escudos',
+      level1Abilities: ['Baluarte +2', 'Código de Honra'],
+    },
+    'Clérigo': {
+      hpBase: 16, hpPerLevel: 4, mpPerLevel: 5,
+      proficiencies: 'Armaduras pesadas, escudos',
+      level1Abilities: ['Devoto', 'Magias (1º círculo)'],
+    },
+    'Druida': {
+      hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
+      proficiencies: 'Escudos',
+      level1Abilities: ['Devoto', 'Empatia Selvagem', 'Magias (1º círculo)'],
+    },
+    'Guerreiro': {
+      hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
+      proficiencies: 'Armas marciais, armaduras pesadas, escudos',
+      level1Abilities: ['Ataque Especial +4'],
+    },
+    'Inventor': {
+      hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
+      proficiencies: 'Nenhuma',
+      level1Abilities: ['Engenhosidade', 'Protótipo'],
+    },
+    'Ladino': {
+      hpBase: 12, hpPerLevel: 3, mpPerLevel: 4,
+      proficiencies: 'Nenhuma',
+      level1Abilities: ['Ataque Furtivo +1d6', 'Especialista'],
+    },
+    'Lutador': {
+      hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
+      proficiencies: 'Nenhuma',
+      level1Abilities: ['Briga (1d6)', 'Golpe Relâmpago'],
+    },
+    'Nobre': {
+      hpBase: 16, hpPerLevel: 4, mpPerLevel: 4,
+      proficiencies: 'Armas marciais, armaduras pesadas, escudos',
+      level1Abilities: ['Autoconfiança', 'Espólio', 'Orgulho'],
+    },
+    'Paladino': {
+      hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
+      proficiencies: 'Armas marciais, armaduras pesadas, escudos',
+      level1Abilities: ['Abençoado', 'Código do Herói', 'Golpe Divino (+1d8)'],
+    },
+  },
   vitalFields: [
     { key: 'hp', label: 'PV', optional: false, color: '#e05252' },
     { key: 'mana', label: 'Mana', optional: false, color: '#5281e0' },
