@@ -46,7 +46,12 @@ export default function IdentityTab({ characterName }: Props) {
       <div className="g3">
         <div className="form-row">
           <label>Origem</label>
-          <input value={char.origin} onChange={(e) => upd('origin', e.target.value)} />
+          <select value={char.origin} onChange={(e) => upd('origin', e.target.value)}>
+            <option value="">— Selecione —</option>
+            {tormenta20.originList.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
         </div>
         <div className="form-row">
           <label>Nível</label>
@@ -67,7 +72,12 @@ export default function IdentityTab({ characterName }: Props) {
       <div className="g3">
         <div className="form-row">
           <label>Divindade</label>
-          <input value={char.deity} onChange={(e) => upd('deity', e.target.value)} />
+          <select value={char.deity} onChange={(e) => upd('deity', e.target.value)}>
+            <option value="">— Selecione —</option>
+            {tormenta20.deityList.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
         </div>
         <div className="form-row">
           <label>Tamanho</label>

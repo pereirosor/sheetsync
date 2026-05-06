@@ -133,6 +133,8 @@ export interface GameSystem {
   systemId: string;
   name: string;
   classList: string[];
+  originList: string[];
+  deityList: string[];
   skillList: SkillDef[];
   vitalFields: VitalFieldDef[];
   shortRestFormula: (char: Character, campaign: Campaign) => Partial<Record<VitalKey, number>>;

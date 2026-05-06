@@ -20,6 +20,20 @@ const tormenta20: GameSystem = {
     'Nobre',
     'Caçador de Monstros',
   ],
+  originList: [
+    'Acólito', 'Amigo dos Animais', 'Amnésico', 'Aristocrata', 'Artesão',
+    'Artista', 'Assistente de Laboratório', 'Batedor', 'Capanga', 'Charlatão',
+    'Circense', 'Criminoso', 'Curandeiro', 'Eremita', 'Escravo', 'Estudioso',
+    'Fazendeiro', 'Forasteiro', 'Gladiador', 'Guarda', 'Herdeiro',
+    'Herói Camponês', 'Marujo', 'Mateiro', 'Membro de Guilda', 'Mercador',
+    'Minerador', 'Nômade', 'Pivete', 'Refugiado', 'Seguidor', 'Selvagem',
+    'Soldado', 'Taverneiro', 'Trabalhador',
+  ],
+  deityList: [
+    'Aharadak', 'Allihanna', 'Arsenal', 'Azgher', 'Hyninn', 'Kallyadranoch',
+    'Khalmyr', 'Lena', 'Lin-Wu', 'Marah', 'Megalokk', 'Nimb', 'Oceano',
+    'Sszzaas', 'Tanna-Toh', 'Tenebra', 'Thwor', 'Thyatis', 'Valkaria', 'Wynna',
+  ],
   vitalFields: [
     { key: 'hp', label: 'PV', optional: false, color: '#e05252' },
     { key: 'mana', label: 'Mana', optional: false, color: '#5281e0' },
