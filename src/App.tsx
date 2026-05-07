@@ -10,13 +10,14 @@ export default function App() {
   useSync();
 
   const role = useStore((s) => s.role);
+  const loading = useStore((s) => s.loading);
   const restoreSession = useStore((s) => s.restoreSession);
-  const initChannel = useStore((s) => s.initChannel);
 
   useEffect(() => {
-    const restored = restoreSession();
-    if (restored) initChannel();
-  }, [restoreSession, initChannel]);
+    void restoreSession();
+  }, [restoreSession]);
+
+  if (loading) return null;
 
   return (
     <>

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
   Campaign,
   CampaignSettings,
@@ -11,8 +12,8 @@ import type {
   VitalKey,
 } from '../types';
 import tormenta20 from '../systems/tormenta20';
+import { supabase } from '../lib/supabase';
 
-const CHANNEL_NAME = 'sheetsync';
 const SESSION_KEY = 'sheetsync_session';
 
 const generateCode = (): string => {
@@ -24,16 +25,40 @@ const genId = () => Math.random().toString(36).slice(2, 9);
 
 const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
-const saveCampaign = (c: Campaign) =>
-  localStorage.setItem(`sheetsync_campaign_${c.code}`, JSON.stringify(c));
+// ── Persistence (Supabase) ────────────────────────────────────────────────────
 
-const loadCampaign = (code: string): Campaign | null => {
-  const raw = localStorage.getItem(`sheetsync_campaign_${code}`);
-  return raw ? (JSON.parse(raw) as Campaign) : null;
-};
+async function saveCampaign(c: Campaign): Promise<void> {
+  await supabase.from('campaigns').upsert({
+    code: c.code,
+    created_at: c.createdAt,
+    settings: c.settings,
+    player_names: c.playerNames,
+    gm_character_names: c.gmCharacterNames,
+  });
+}
 
-const saveCharacter = (ch: Character) =>
-  localStorage.setItem(`sheetsync_player_${ch.campaignCode}_${ch.name}`, JSON.stringify(ch));
+async function loadCampaign(code: string): Promise<Campaign | null> {
+  const { data } = await supabase
+    .from('campaigns')
+    .select('*')
+    .eq('code', code)
+    .single();
+  if (!data) return null;
+  return {
+    code: data.code as string,
+    createdAt: data.created_at as number,
+    settings: data.settings as CampaignSettings,
+    playerNames: (data.player_names as string[]) ?? [],
+    gmCharacterNames: (data.gm_character_names as string[]) ?? [],
+  };
+}
+
+async function saveCharacter(ch: Character): Promise<void> {
+  await supabase.from('characters').upsert(
+    { campaign_code: ch.campaignCode, name: ch.name, owner: ch.owner, data: ch },
+    { onConflict: 'campaign_code,name' },
+  );
+}
 
 const normalizeCharacter = (ch: Character): Character => ({
   ...ch,
@@ -42,28 +67,31 @@ const normalizeCharacter = (ch: Character): Character => ({
   originBenefits: ch.originBenefits ?? [],
 });
 
-const loadCharacter = (campaignCode: string, name: string): Character | null => {
-  const raw = localStorage.getItem(`sheetsync_player_${campaignCode}_${name}`);
-  return raw ? normalizeCharacter(JSON.parse(raw) as Character) : null;
-};
+async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {
+  const { data } = await supabase
+    .from('characters')
+    .select('data')
+    .eq('campaign_code', campaign.code)
+    .eq('owner', 'player');
+  if (!data) return {};
+  return Object.fromEntries(
+    (data as { data: Character }[]).map((r) => [r.data.name, normalizeCharacter(r.data)]),
+  );
+}
 
-const loadAllCharacters = (campaign: Campaign): Record<string, Character> => {
-  const chars: Record<string, Character> = {};
-  for (const name of campaign.playerNames) {
-    const ch = loadCharacter(campaign.code, name);
-    if (ch) chars[name] = ch;
-  }
-  return chars;
-};
+async function loadAllGMCharacters(campaign: Campaign): Promise<Record<string, Character>> {
+  const { data } = await supabase
+    .from('characters')
+    .select('data')
+    .eq('campaign_code', campaign.code)
+    .eq('owner', 'gm');
+  if (!data) return {};
+  return Object.fromEntries(
+    (data as { data: Character }[]).map((r) => [r.data.name, normalizeCharacter(r.data)]),
+  );
+}
 
-const loadAllGMCharacters = (campaign: Campaign): Record<string, Character> => {
-  const chars: Record<string, Character> = {};
-  for (const name of (campaign.gmCharacterNames ?? [])) {
-    const ch = loadCharacter(campaign.code, name);
-    if (ch) chars[name] = ch;
-  }
-  return chars;
-};
+// ── Default character factory ─────────────────────────────────────────────────
 
 export const createDefaultCharacter = (campaignCode: string, name: string): Character => ({
   id: `${campaignCode}_${name}`,
@@ -100,20 +128,23 @@ export const createDefaultCharacter = (campaignCode: string, name: string): Char
   inScene: false,
 });
 
+// ── Store ─────────────────────────────────────────────────────────────────────
+
 interface AppState {
   role: Role | null;
+  loading: boolean;
   pendingGMCode: string | null;
   campaign: Campaign | null;
   currentPlayerName: string | null;
   characters: Record<string, Character>;
-  channel: BroadcastChannel | null;
+  channel: RealtimeChannel | null;
   toasts: ToastItem[];
   diceLog: DiceRollEntry[];
 
-  initChannel: () => void;
-  createCampaign: () => void;
-  confirmGMEntry: () => void;
-  joinCampaign: (code: string, characterName: string) => 'ok' | 'not_found';
+  initChannel: (campaignCode: string) => void;
+  createCampaign: () => Promise<void>;
+  confirmGMEntry: () => Promise<void>;
+  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found'>;
   leaveCampaign: () => void;
   updateCharacter: (name: string, updates: Partial<Character>) => void;
   updateVital: (characterName: string, field: VitalKey, delta: number) => void;
@@ -121,18 +152,30 @@ interface AppState {
   applyRest: (characterName: string, restType: 'short' | 'long') => void;
   updateSettings: (settings: Partial<CampaignSettings>) => void;
   handleSyncMessage: (msg: SyncMessage) => void;
-  restoreSession: () => boolean;
+  restoreSession: () => Promise<void>;
   addToast: (message: string, type: ToastItem['type']) => void;
   removeToast: (id: string) => void;
   createGMCharacter: (data: GMCharacterFormData) => void;
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
+  deleteCampaign: () => void;
   toggleNPCInScene: (name: string) => void;
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
 }
 
+const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
+  supabase
+    .channel(`campaign:${campaignCode}`)
+    .on('broadcast', { event: 'sync' }, ({ payload }) => onMessage(payload as SyncMessage));
+
+const broadcast = (channel: RealtimeChannel | null, msg: SyncMessage) => {
+  if (!channel) return;
+  void channel.send({ type: 'broadcast', event: 'sync', payload: msg });
+};
+
 export const useStore = create<AppState>((set, get) => ({
   role: null,
+  loading: true,
   pendingGMCode: null,
   campaign: null,
   currentPlayerName: null,
@@ -141,14 +184,13 @@ export const useStore = create<AppState>((set, get) => ({
   toasts: [],
   diceLog: [],
 
-  initChannel: () => {
+  initChannel: (campaignCode: string) => {
     if (get().channel) return;
-    const ch = new BroadcastChannel(CHANNEL_NAME);
-    ch.onmessage = (e) => get().handleSyncMessage(e.data as SyncMessage);
+    const ch = buildChannel(campaignCode, (msg) => get().handleSyncMessage(msg)).subscribe();
     set({ channel: ch });
   },
 
-  createCampaign: () => {
+  createCampaign: async () => {
     const code = generateCode();
     const campaign: Campaign = {
       code,
@@ -157,51 +199,70 @@ export const useStore = create<AppState>((set, get) => ({
       playerNames: [],
       gmCharacterNames: [],
     };
-    saveCampaign(campaign);
+    await saveCampaign(campaign);
     set({ campaign, pendingGMCode: code, characters: {} });
   },
 
-  confirmGMEntry: () => {
-    const { pendingGMCode } = get();
-    if (!pendingGMCode) return;
+  confirmGMEntry: async () => {
+    const { pendingGMCode, campaign } = get();
+    if (!pendingGMCode || !campaign) return;
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ role: 'gm', campaignCode: pendingGMCode }));
     set({ role: 'gm', pendingGMCode: null });
+    const [playerChars, gmChars] = await Promise.all([
+      loadAllCharacters(campaign),
+      loadAllGMCharacters(campaign),
+    ]);
+    set({ characters: { ...playerChars, ...gmChars } });
   },
 
-  joinCampaign: (code: string, characterName: string) => {
-    const campaign = loadCampaign(code);
+  joinCampaign: async (code: string, characterName: string) => {
+    const campaign = await loadCampaign(code);
     if (!campaign) return 'not_found';
 
-    let character = loadCharacter(code, characterName);
-    if (!character) character = createDefaultCharacter(code, characterName);
+    let character = null;
+    const { data: existing } = await supabase
+      .from('characters')
+      .select('data')
+      .eq('campaign_code', code)
+      .eq('name', characterName)
+      .single();
+    character = existing ? normalizeCharacter(existing.data as Character) : createDefaultCharacter(code, characterName);
 
     if (!campaign.playerNames.includes(characterName)) {
       campaign.playerNames = [...campaign.playerNames, characterName];
-      saveCampaign(campaign);
+      await saveCampaign(campaign);
     }
-    saveCharacter(character);
+    await saveCharacter(character);
 
-    const playerChars = loadAllCharacters(campaign);
-    const gmChars = loadAllGMCharacters(campaign);
+    const [playerChars, gmChars] = await Promise.all([
+      loadAllCharacters(campaign),
+      loadAllGMCharacters(campaign),
+    ]);
     const characters = { ...playerChars, ...gmChars };
 
     sessionStorage.setItem(
       SESSION_KEY,
       JSON.stringify({ role: 'player', campaignCode: code, characterName }),
     );
-    set({ campaign, role: 'player', currentPlayerName: characterName, characters });
 
-    const ch = get().channel;
-    if (ch) {
-      const msg: SyncMessage = { type: 'PLAYER_JOIN', payload: { campaignCode: code, character } };
-      ch.postMessage(msg);
-    }
+    const joinedCharacter = character;
+    const ch = buildChannel(code, (msg) => get().handleSyncMessage(msg)).subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        const msg: SyncMessage = {
+          type: 'PLAYER_JOIN',
+          payload: { campaignCode: code, character: joinedCharacter },
+        };
+        void ch.send({ type: 'broadcast', event: 'sync', payload: msg });
+      }
+    });
 
+    set({ campaign, role: 'player', currentPlayerName: characterName, characters, channel: ch });
     return 'ok';
   },
 
   leaveCampaign: () => {
-    get().channel?.close();
+    const ch = get().channel;
+    if (ch) void supabase.removeChannel(ch);
     sessionStorage.removeItem(SESSION_KEY);
     set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null });
   },
@@ -211,14 +272,10 @@ export const useStore = create<AppState>((set, get) => ({
     const existing = characters[name];
     if (!existing) return;
     const updated = { ...existing, ...updates };
-    saveCharacter(updated);
+    void saveCharacter(updated);
     set({ characters: { ...characters, [name]: updated } });
-    if (channel && campaign) {
-      const msg: SyncMessage = {
-        type: 'SHEET_UPDATE',
-        payload: { campaignCode: campaign.code, character: updated },
-      };
-      channel.postMessage(msg);
+    if (campaign) {
+      broadcast(channel, { type: 'SHEET_UPDATE', payload: { campaignCode: campaign.code, character: updated } });
     }
   },
 
@@ -232,14 +289,10 @@ export const useStore = create<AppState>((set, get) => ({
       ...char,
       vitals: { ...char.vitals, [field]: { ...vital, current: newCurrent } },
     };
-    saveCharacter(updated);
+    void saveCharacter(updated);
     set({ characters: { ...characters, [characterName]: updated } });
-    if (channel && campaign) {
-      const msg: SyncMessage = {
-        type: 'GM_VITAL_UPDATE',
-        payload: { campaignCode: campaign.code, characterName, field, delta },
-      };
-      channel.postMessage(msg);
+    if (campaign) {
+      broadcast(channel, { type: 'GM_VITAL_UPDATE', payload: { campaignCode: campaign.code, characterName, field, delta } });
     }
   },
 
@@ -248,14 +301,9 @@ export const useStore = create<AppState>((set, get) => ({
     const char = characters[characterName];
     if (!char) return;
     const vital = char.vitals[field];
-    const updated: Character = {
-      ...char,
-      vitals: {
-        ...char.vitals,
-        [field]: { current: Math.min(vital.current, max), max },
-      },
-    };
-    get().updateCharacter(characterName, { vitals: updated.vitals });
+    get().updateCharacter(characterName, {
+      vitals: { ...char.vitals, [field]: { current: Math.min(vital.current, max), max } },
+    });
   },
 
   applyRest: (characterName: string, restType: 'short' | 'long') => {
@@ -279,42 +327,27 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     const updated = { ...char, vitals: newVitals };
-    saveCharacter(updated);
+    void saveCharacter(updated);
     set({ characters: { ...characters, [characterName]: updated } });
-
-    if (channel) {
-      const msg: SyncMessage = {
-        type: 'REST_APPLIED',
-        payload: { campaignCode: campaign.code, characterName, restType },
-      };
-      channel.postMessage(msg);
-    }
+    broadcast(channel, { type: 'REST_APPLIED', payload: { campaignCode: campaign.code, characterName, restType } });
   },
 
   updateSettings: (settings: Partial<CampaignSettings>) => {
     const { campaign, channel } = get();
     if (!campaign) return;
     const updated = { ...campaign, settings: { ...campaign.settings, ...settings } };
-    saveCampaign(updated);
+    void saveCampaign(updated);
     set({ campaign: updated });
-    if (channel) {
-      const msg: SyncMessage = {
-        type: 'CAMPAIGN_SETTINGS_UPDATE',
-        payload: { campaignCode: campaign.code, settings: updated.settings },
-      };
-      channel.postMessage(msg);
-    }
+    broadcast(channel, { type: 'CAMPAIGN_SETTINGS_UPDATE', payload: { campaignCode: campaign.code, settings: updated.settings } });
   },
 
   handleSyncMessage: (msg: SyncMessage) => {
     const { campaign, characters, role, addToast } = get();
-    if (!campaign) return;
-    if (msg.payload.campaignCode !== campaign.code) return;
+    if (!campaign || msg.payload.campaignCode !== campaign.code) return;
 
     switch (msg.type) {
       case 'PLAYER_JOIN': {
         const char = msg.payload.character;
-        // Não sobrescrever NPC/Monstro do mestre com jogador de mesmo nome
         if (characters[char.name]?.owner === 'gm') break;
         const updatedCampaign: Campaign = {
           ...campaign,
@@ -322,15 +355,13 @@ export const useStore = create<AppState>((set, get) => ({
             ? campaign.playerNames
             : [...campaign.playerNames, char.name],
         };
-        saveCampaign(updatedCampaign);
-        saveCharacter(char);
+        void saveCampaign(updatedCampaign);
         set({ campaign: updatedCampaign, characters: { ...characters, [char.name]: char } });
         if (role === 'gm') addToast(`${char.name} entrou na campanha!`, 'info');
         break;
       }
       case 'SHEET_UPDATE': {
         const char = msg.payload.character;
-        saveCharacter(char);
         set({ characters: { ...characters, [char.name]: char } });
         break;
       }
@@ -341,15 +372,10 @@ export const useStore = create<AppState>((set, get) => ({
         if (!char) break;
         const vital = char.vitals[field];
         const newCurrent = Math.max(0, Math.min(vital.max, vital.current + delta));
-        const updated = {
-          ...char,
-          vitals: { ...char.vitals, [field]: { ...vital, current: newCurrent } },
-        };
-        saveCharacter(updated);
+        const updated = { ...char, vitals: { ...char.vitals, [field]: { ...vital, current: newCurrent } } };
         set({ characters: { ...characters, [characterName]: updated } });
         const label = field === 'hp' ? 'PV' : field === 'mana' ? 'Mana' : 'Sanidade';
-        if (delta < 0)
-          addToast(`Mestre aplicou ${Math.abs(delta)} de dano (${label})`, 'damage');
+        if (delta < 0) addToast(`Mestre aplicou ${Math.abs(delta)} de dano (${label})`, 'damage');
         else addToast(`Mestre recuperou ${delta} de ${label}`, 'heal');
         break;
       }
@@ -371,16 +397,12 @@ export const useStore = create<AppState>((set, get) => ({
               ? { ...vital, current: Math.min(vital.max, v) }
               : { ...vital, current: Math.min(vital.max, vital.current + v) };
         }
-        const updated = { ...char, vitals: newVitals };
-        saveCharacter(updated);
-        set({ characters: { ...characters, [characterName]: updated } });
+        set({ characters: { ...characters, [characterName]: { ...char, vitals: newVitals } } });
         addToast(restType === 'long' ? 'Descanso longo aplicado!' : 'Descanso curto aplicado!', 'heal');
         break;
       }
       case 'CAMPAIGN_SETTINGS_UPDATE': {
-        const updated = { ...campaign, settings: msg.payload.settings };
-        saveCampaign(updated);
-        set({ campaign: updated });
+        set({ campaign: { ...campaign, settings: msg.payload.settings } });
         break;
       }
       case 'DICE_ROLL': {
@@ -392,25 +414,23 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  restoreSession: () => {
+  restoreSession: async () => {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return false;
-    const session = JSON.parse(raw) as {
-      role: Role;
-      campaignCode: string;
-      characterName?: string;
-    };
-    const campaign = loadCampaign(session.campaignCode);
-    if (!campaign) return false;
-    const playerChars = loadAllCharacters(campaign);
-    const gmChars = loadAllGMCharacters(campaign);
+    if (!raw) { set({ loading: false }); return; }
+    const session = JSON.parse(raw) as { role: Role; campaignCode: string; characterName?: string };
+    const campaign = await loadCampaign(session.campaignCode);
+    if (!campaign) { sessionStorage.removeItem(SESSION_KEY); set({ loading: false }); return; }
+    const [playerChars, gmChars] = await Promise.all([
+      loadAllCharacters(campaign),
+      loadAllGMCharacters(campaign),
+    ]);
     set({
       role: session.role,
       campaign,
       characters: { ...playerChars, ...gmChars },
       currentPlayerName: session.characterName ?? null,
+      loading: false,
     });
-    return true;
   },
 
   createGMCharacter: (data: GMCharacterFormData) => {
@@ -461,8 +481,8 @@ export const useStore = create<AppState>((set, get) => ({
       ...campaign,
       gmCharacterNames: [...(campaign.gmCharacterNames ?? []), data.name],
     };
-    saveCampaign(updatedCampaign);
-    saveCharacter(ch);
+    void saveCampaign(updatedCampaign);
+    void saveCharacter(ch);
     set({ campaign: updatedCampaign, characters: { ...characters, [data.name]: ch } });
   },
 
@@ -477,7 +497,10 @@ export const useStore = create<AppState>((set, get) => ({
         get().addToast(`Já existe um personagem com o nome "${data.name}".`, 'warning');
         return;
       }
-      localStorage.removeItem(`sheetsync_player_${campaign.code}_${originalName}`);
+      void supabase.from('characters')
+        .delete()
+        .eq('campaign_code', campaign.code)
+        .eq('name', originalName);
     }
     const updated: Character = {
       ...existing,
@@ -504,12 +527,10 @@ export const useStore = create<AppState>((set, get) => ({
       actions: data.actions,
       items: data.items,
     };
-    const gmNames = (campaign.gmCharacterNames ?? []).map((n) =>
-      n === originalName ? data.name : n,
-    );
+    const gmNames = (campaign.gmCharacterNames ?? []).map((n) => (n === originalName ? data.name : n));
     const updatedCampaign = { ...campaign, gmCharacterNames: gmNames };
-    saveCampaign(updatedCampaign);
-    saveCharacter(updated);
+    void saveCampaign(updatedCampaign);
+    void saveCharacter(updated);
     const newChars = { ...characters };
     if (data.name !== originalName) delete newChars[originalName];
     newChars[data.name] = updated;
@@ -519,15 +540,22 @@ export const useStore = create<AppState>((set, get) => ({
   deleteGMCharacter: (name: string) => {
     const { campaign, characters } = get();
     if (!campaign) return;
-    localStorage.removeItem(`sheetsync_player_${campaign.code}_${name}`);
+    void supabase.from('characters').delete().eq('campaign_code', campaign.code).eq('name', name);
     const updatedCampaign: Campaign = {
       ...campaign,
       gmCharacterNames: (campaign.gmCharacterNames ?? []).filter((n) => n !== name),
     };
-    saveCampaign(updatedCampaign);
+    void saveCampaign(updatedCampaign);
     const newChars = { ...characters };
     delete newChars[name];
     set({ campaign: updatedCampaign, characters: newChars });
+  },
+
+  deleteCampaign: () => {
+    const { campaign } = get();
+    if (!campaign) return;
+    void supabase.from('campaigns').delete().eq('code', campaign.code);
+    get().leaveCampaign();
   },
 
   toggleNPCInScene: (name: string) => {
@@ -535,14 +563,13 @@ export const useStore = create<AppState>((set, get) => ({
     const char = characters[name];
     if (!char || char.owner !== 'gm') return;
     const updated = { ...char, inScene: !char.inScene };
-    saveCharacter(updated);
+    void saveCharacter(updated);
     set({ characters: { ...characters, [name]: updated } });
   },
 
   addToast: (message: string, type: ToastItem['type']) => {
     const id = genId();
-    const toast: ToastItem = { id, message, type };
-    set((s) => ({ toasts: [...s.toasts, toast] }));
+    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }));
     setTimeout(() => get().removeToast(id), 4500);
   },
 
@@ -561,7 +588,7 @@ export const useStore = create<AppState>((set, get) => ({
         type: 'DICE_ROLL',
         payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total },
       };
-      channel.postMessage(msg);
+      broadcast(channel, msg);
     }
   },
 }));

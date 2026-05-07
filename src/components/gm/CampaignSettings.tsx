@@ -6,7 +6,8 @@ interface Props {
 
 export default function CampaignSettings({ onClose }: Props) {
   const campaign = useStore((s) => s.campaign);
-  const leaveCampaign = useStore((s) => s.leaveCampaign);
+  const updateSettings = useStore((s) => s.updateSettings);
+  const deleteCampaign = useStore((s) => s.deleteCampaign);
 
   if (!campaign) return null;
 
@@ -58,8 +59,7 @@ export default function CampaignSettings({ onClose }: Props) {
           className="btn btn-danger w-full"
           onClick={() => {
             if (confirm('Encerrar a campanha? Todos os dados serão removidos.')) {
-              localStorage.removeItem(`sheetsync_campaign_${campaign.code}`);
-              leaveCampaign();
+              deleteCampaign();
             }
           }}
         >
