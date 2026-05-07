@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { useStore } from '../../store';
-import type { SpellItem } from '../../types';
+import type { SpellItem, SpellRef } from '../../types';
 import { evalDiceExpr } from '../../utils/dice';
+import AutocompleteInput from '../ui/AutocompleteInput';
+import tormenta20 from '../../systems/tormenta20';
 
 interface Props {
   characterName: string;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
+const circleCost = [0, 1, 3, 6, 10, 15];
 
 const emptySpell = (): SpellItem => ({
   id: genId(),
@@ -19,12 +23,23 @@ const emptySpell = (): SpellItem => ({
   description: '',
 });
 
+type SpellOption = { name: string } & SpellRef;
+
 export default function SpellsTab({ characterName }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
+  const [searchVal, setSearchVal] = useState('');
+  const [expandedAmps, setExpandedAmps] = useState<Set<string>>(new Set());
 
   if (!char) return null;
+
+  const magicType = tormenta20.classMagicType[char.class] ?? null;
+
+  const spellOptions: SpellOption[] = Object.entries(tormenta20.spellData)
+    .filter(([, s]) => magicType === null ? false : (s.spellType === magicType || s.spellType === 'universal'))
+    .map(([name, s]) => ({ name, ...s }))
+    .sort((a, b) => a.circle - b.circle || a.name.localeCompare(b.name));
 
   const setSpells = (spells: SpellItem[]) => updateCharacter(characterName, { spells });
   const addSpell = () => setSpells([...char.spells, emptySpell()]);
@@ -38,15 +53,40 @@ export default function SpellsTab({ characterName }: Props) {
     rollDice({ rollerName: char.name || characterName, label: spell.name || 'Magia', diceExpr: spell.diceExpr, breakdown, total });
   };
 
+  const toggleAmp = (id: string) =>
+    setExpandedAmps((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+
   return (
     <div>
       <div className="flex-between mb2">
         <p className="sec-title" style={{ margin: 0 }}>Magias e Habilidades</p>
-        <button className="btn btn-secondary btn-sm" onClick={addSpell}>+ Adicionar</button>
+        <button className="btn btn-secondary btn-sm" onClick={addSpell}>+ Vazia</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <AutocompleteInput<SpellOption>
+          value={searchVal}
+          onChange={setSearchVal}
+          onSelect={(opt) => {
+            setSpells([...char.spells, {
+              id: genId(), name: opt.name,
+              circleOrLevel: `${opt.circle}º círculo`,
+              manaCost: circleCost[opt.circle] ?? 0,
+              school: opt.school, range: opt.range,
+              duration: opt.duration, description: opt.description,
+              amplifications: opt.amplifications,
+            }]);
+          }}
+          options={spellOptions}
+          getLabel={(o) => o.name}
+          getSublabel={(o) => `${o.circle}º círculo — ${o.school}`}
+          placeholder={magicType ? `Buscar magia ${magicType === 'arcana' ? 'arcana' : 'divina'}…` : 'Sua classe não usa magia'}
+          disabled={!magicType}
+        />
       </div>
 
       {char.spells.length === 0 ? (
-        <p className="text-muted text-sm" style={{ padding: '20px 0' }}>Nenhuma magia. Clique em "+ Adicionar".</p>
+        <p className="text-muted text-sm" style={{ padding: '20px 0' }}>Nenhuma magia. Use a busca acima ou clique em "+ Vazia".</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {char.spells.map((spell) => (
@@ -82,12 +122,12 @@ export default function SpellsTab({ characterName }: Props) {
                 </div>
                 <div className="form-row">
                   <label>Alcance</label>
-                  <input value={spell.range} placeholder="Ex: 9 quadrados"
+                  <input value={spell.range} placeholder="Ex: médio"
                     onChange={(e) => updateSpell(spell.id, 'range', e.target.value)} />
                 </div>
                 <div className="form-row">
                   <label>Duração</label>
-                  <input value={spell.duration} placeholder="Ex: Cena"
+                  <input value={spell.duration} placeholder="Ex: cena"
                     onChange={(e) => updateSpell(spell.id, 'duration', e.target.value)} />
                 </div>
               </div>
@@ -97,7 +137,6 @@ export default function SpellsTab({ characterName }: Props) {
                   onChange={(e) => updateSpell(spell.id, 'description', e.target.value)}
                   style={{ minHeight: 60 }} />
               </div>
-              {/* Dice expression */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 10 }}>
                 <div className="form-row" style={{ flex: 1 }}>
                   <label>Dado de Dano / Efeito</label>
@@ -106,7 +145,6 @@ export default function SpellsTab({ characterName }: Props) {
                     placeholder="Ex: 2d6+3+Misticismo"
                     onChange={(e) => updateSpell(spell.id, 'diceExpr', e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRoll(spell)}
-                    title="NdM+número+NomePerícia — ex: 2d8+1d4+Misticismo"
                   />
                 </div>
                 {spell.diceExpr?.trim() && (
@@ -116,6 +154,29 @@ export default function SpellsTab({ characterName }: Props) {
                   </button>
                 )}
               </div>
+              {spell.amplifications && spell.amplifications.length > 0 && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 10 }}>
+                  <button
+                    onClick={() => toggleAmp(spell.id)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 11, color: 'var(--text2)', padding: 0,
+                    }}
+                  >
+                    {expandedAmps.has(spell.id) ? '▲' : '▼'} Aprimoramentos ({spell.amplifications.length})
+                  </button>
+                  {expandedAmps.has(spell.id) && (
+                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {spell.amplifications.map((amp, i) => (
+                        <div key={i} style={{ fontSize: 12 }}>
+                          <span style={{ color: 'var(--gold)', fontWeight: 600 }}>+{amp.cost} PM:</span>{' '}
+                          {amp.effect}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

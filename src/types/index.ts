@@ -35,6 +35,48 @@ export interface CharacterAttributes {
   charisma: number;
 }
 
+export interface SpellAmplification {
+  cost: number;
+  effect: string;
+}
+
+export interface WeaponRef {
+  damage: string;
+  damageType: string;
+  critical: string;
+  range: string;
+  weight: number;
+  category: 'simples' | 'marcial' | 'exótica' | 'fogo';
+  properties?: string;
+}
+
+export interface ArmorRef {
+  defenseBonus: string;
+  penalty: string;
+  weight: number;
+  type: 'leve' | 'pesada' | 'escudo';
+}
+
+export interface GeneralItemRef {
+  weight: number;
+  description?: string;
+}
+
+export interface SpellRef {
+  spellType: 'arcana' | 'divina' | 'universal';
+  circle: number;
+  school: string;
+  castingTime: string;
+  range: string;
+  area?: string;
+  target?: string;
+  effect?: string;
+  duration: string;
+  resistance?: string;
+  description: string;
+  amplifications: SpellAmplification[];
+}
+
 export interface EquipmentItem {
   id: string;
   name: string;
@@ -43,6 +85,10 @@ export interface EquipmentItem {
   weight: number;
   notes: string;
   diceExpr?: string;
+  damage?: string;
+  damageType?: string;
+  critical?: string;
+  properties?: string;
 }
 
 export interface SpellItem {
@@ -55,6 +101,7 @@ export interface SpellItem {
   duration: string;
   description: string;
   diceExpr?: string;
+  amplifications?: SpellAmplification[];
 }
 
 export interface DiceRollEntry {
@@ -172,6 +219,11 @@ export interface GameSystem {
   vitalFields: VitalFieldDef[];
   shortRestFormula: (char: Character, campaign: Campaign) => Partial<Record<VitalKey, number>>;
   longRestFormula: (char: Character, campaign: Campaign) => Partial<Record<VitalKey, number>>;
+  weaponData: Record<string, WeaponRef>;
+  armorData: Record<string, ArmorRef>;
+  generalItemData: Record<string, GeneralItemRef>;
+  spellData: Record<string, SpellRef>;
+  classMagicType: Record<string, 'arcana' | 'divina' | null>;
 }
 
 export type SyncMessage =
