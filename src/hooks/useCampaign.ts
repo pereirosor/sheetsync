@@ -8,19 +8,18 @@ export function useCampaign() {
   const [code, setCode] = useState('');
   const [charName, setCharName] = useState('');
   const [error, setError] = useState('');
+  const [joining, setJoining] = useState(false);
 
   const createCampaign = useStore((s) => s.createCampaign);
   const confirmGMEntry = useStore((s) => s.confirmGMEntry);
   const joinCampaign = useStore((s) => s.joinCampaign);
-  const initChannel = useStore((s) => s.initChannel);
   const pendingGMCode = useStore((s) => s.pendingGMCode);
 
-  const handleCreate = () => {
-    initChannel();
-    createCampaign();
+  const handleCreate = async () => {
+    await createCampaign();
   };
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedCode = code.trim().toUpperCase();
     const trimmedName = charName.trim();
@@ -28,22 +27,16 @@ export function useCampaign() {
       setError('Preencha o código da campanha e o nome do personagem.');
       return;
     }
-    initChannel();
-    const result = joinCampaign(trimmedCode, trimmedName);
+    setJoining(true);
+    const result = await joinCampaign(trimmedCode, trimmedName);
+    setJoining(false);
     if (result === 'not_found') {
       setError('Campanha não encontrada. Verifique o código e tente novamente.');
     }
   };
 
-  const goToJoin = () => {
-    setView('join');
-    setError('');
-  };
-
-  const goHome = () => {
-    setView('home');
-    setError('');
-  };
+  const goToJoin = () => { setView('join'); setError(''); };
+  const goHome = () => { setView('home'); setError(''); };
 
   return {
     view,
@@ -52,6 +45,7 @@ export function useCampaign() {
     charName,
     setCharName: (v: string) => { setCharName(v); setError(''); },
     error,
+    joining,
     pendingGMCode,
     handleCreate,
     handleJoin,
