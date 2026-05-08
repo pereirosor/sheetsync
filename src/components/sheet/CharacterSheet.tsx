@@ -8,6 +8,7 @@ import SkillsTab from './SkillsTab';
 import EquipmentTab from './EquipmentTab';
 import SpellsTab from './SpellsTab';
 import NotesTab from './NotesTab';
+import DiceRoller from './DiceRoller';
 
 type TabId = 'identity' | 'attributes' | 'skills' | 'equipment' | 'spells' | 'notes';
 
@@ -34,17 +35,15 @@ export default function CharacterSheet() {
 
   const { vitals } = char;
 
+  const avatarInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div className="page-header">
         <div>
-          <h2 style={{ fontSize: 16, color: 'var(--gold)' }}>
-            {char.name || currentPlayerName}
-          </h2>
           <p style={{ fontSize: 11, color: 'var(--text2)' }}>
-            {char.class || '—'} · Nível {char.level} · Campanha{' '}
-            <strong style={{ color: 'var(--text)' }}>{campaign.code}</strong>
+            Campanha <strong style={{ color: 'var(--text)' }}>{campaign.code}</strong>
           </p>
         </div>
         <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
@@ -52,67 +51,82 @@ export default function CharacterSheet() {
         </button>
       </div>
 
-      <div style={{ padding: '14px 16px', maxWidth: 900, width: '100%', margin: '0 auto', flex: 1 }}>
-        {/* Vitals header */}
-        <div className="vitals-header">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-            <div style={{ flex: '1 1 160px' }}>
-              <ProgressBar
-                label="PV"
-                current={vitals.hp.current}
-                max={vitals.hp.max}
-                color="var(--hp)"
-              />
-            </div>
+      {/* 3-column layout */}
+      <div className="sheet-layout">
+        {/* Sidebar esquerda — resumo do personagem */}
+        <aside className="sidebar-left">
+          <div className="char-avatar">{avatarInitial}</div>
+
+          <div className="char-nameblock">
+            <h3 style={{ fontSize: 15, color: 'var(--gold)', fontFamily: 'Cinzel, serif', marginBottom: 2 }}>
+              {char.name || currentPlayerName}
+            </h3>
+            <p style={{ fontSize: 11, color: 'var(--text2)' }}>
+              {char.class || '—'} · Nível {char.level}
+            </p>
+          </div>
+
+          <div className="vitals-stack">
+            <ProgressBar
+              label="PV"
+              current={vitals.hp.current}
+              max={vitals.hp.max}
+              color="var(--hp)"
+            />
             {vitals.mana.max > 0 && (
-              <div style={{ flex: '1 1 160px' }}>
-                <ProgressBar
-                  label="Mana"
-                  current={vitals.mana.current}
-                  max={vitals.mana.max}
-                  color="var(--mana)"
-                />
-              </div>
+              <ProgressBar
+                label="Mana"
+                current={vitals.mana.current}
+                max={vitals.mana.max}
+                color="var(--mana)"
+              />
             )}
             {campaign.settings.sanityEnabled && (
-              <div style={{ flex: '1 1 160px' }}>
-                <ProgressBar
-                  label="Sanidade"
-                  current={vitals.sanity.current}
-                  max={vitals.sanity.max}
-                  color="var(--sanity)"
-                />
-              </div>
+              <ProgressBar
+                label="Sanidade"
+                current={vitals.sanity.current}
+                max={vitals.sanity.max}
+                color="var(--sanity)"
+              />
             )}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <Badge label="CA" value={vitals.ac} color="var(--gold)" />
-              <Badge label="Desl." value={`${char.speed}q`} />
+          </div>
+
+          <div className="passives-row">
+            <Badge label="CA" value={vitals.ac} color="var(--gold)" />
+            <Badge label="Desl." value={`${char.speed}q`} />
+          </div>
+        </aside>
+
+        {/* Área central — tabs */}
+        <main className="sheet-main-area">
+          <div className="sheet-main-inner">
+            <div className="tab-nav">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              {activeTab === 'identity' && <IdentityTab characterName={currentPlayerName} />}
+              {activeTab === 'attributes' && <AttributesTab characterName={currentPlayerName} />}
+              {activeTab === 'skills' && <SkillsTab characterName={currentPlayerName} />}
+              {activeTab === 'equipment' && <EquipmentTab characterName={currentPlayerName} />}
+              {activeTab === 'spells' && <SpellsTab characterName={currentPlayerName} />}
+              {activeTab === 'notes' && <NotesTab characterName={currentPlayerName} />}
             </div>
           </div>
-        </div>
+        </main>
 
-        {/* Tab nav */}
-        <div className="tab-nav">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <div>
-          {activeTab === 'identity' && <IdentityTab characterName={currentPlayerName} />}
-          {activeTab === 'attributes' && <AttributesTab characterName={currentPlayerName} />}
-          {activeTab === 'skills' && <SkillsTab characterName={currentPlayerName} />}
-          {activeTab === 'equipment' && <EquipmentTab characterName={currentPlayerName} />}
-          {activeTab === 'spells' && <SpellsTab characterName={currentPlayerName} />}
-          {activeTab === 'notes' && <NotesTab characterName={currentPlayerName} />}
-        </div>
+        {/* Sidebar direita — rolador de dados */}
+        <aside className="sidebar-right">
+          <DiceRoller />
+        </aside>
       </div>
     </div>
   );
