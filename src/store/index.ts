@@ -43,7 +43,7 @@ async function loadCampaign(code: string): Promise<Campaign | null> {
     .select('*')
     .eq('code', code)
     .single();
-  if (error && error.code !== 'PGRST116') throw new Error(error.message);
+  if (error && error.code !== 'PGRST116') throw new Error(`[${error.code}] ${error.message}`);
   if (!data) return null;
   return {
     code: data.code as string,
@@ -145,7 +145,7 @@ interface AppState {
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
   confirmGMEntry: () => Promise<void>;
-  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'error'>;
+  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | string>;
   leaveCampaign: () => void;
   updateCharacter: (name: string, updates: Partial<Character>) => void;
   updateVital: (characterName: string, field: VitalKey, delta: number) => void;
@@ -260,8 +260,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     set({ campaign, role: 'player', currentPlayerName: characterName, characters, channel: ch });
     return 'ok';
-    } catch {
-      return 'error';
+    } catch (e) {
+      return e instanceof Error ? e.message : 'unknown error';
     }
   },
 

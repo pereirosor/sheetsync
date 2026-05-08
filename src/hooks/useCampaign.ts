@@ -32,8 +32,8 @@ export function useCampaign() {
     setJoining(false);
     if (result === 'not_found') {
       setError('Campanha não encontrada. Verifique o código e tente novamente.');
-    } else if (result === 'error') {
-      setError('Erro de conexão com o servidor. Verifique sua internet e tente novamente.');
+    } else if (result !== 'ok') {
+      setError(`Erro de conexão: ${result}`);
     }
   };
 
