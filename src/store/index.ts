@@ -38,11 +38,12 @@ async function saveCampaign(c: Campaign): Promise<void> {
 }
 
 async function loadCampaign(code: string): Promise<Campaign | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('campaigns')
     .select('*')
     .eq('code', code)
     .single();
+  if (error && error.code !== 'PGRST116') throw new Error(error.message);
   if (!data) return null;
   return {
     code: data.code as string,
@@ -144,7 +145,7 @@ interface AppState {
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
   confirmGMEntry: () => Promise<void>;
-  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found'>;
+  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'error'>;
   leaveCampaign: () => void;
   updateCharacter: (name: string, updates: Partial<Character>) => void;
   updateVital: (characterName: string, field: VitalKey, delta: number) => void;
@@ -216,6 +217,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   joinCampaign: async (code: string, characterName: string) => {
+    try {
     const campaign = await loadCampaign(code);
     if (!campaign) return 'not_found';
 
@@ -258,6 +260,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     set({ campaign, role: 'player', currentPlayerName: characterName, characters, channel: ch });
     return 'ok';
+    } catch {
+      return 'error';
+    }
   },
 
   leaveCampaign: () => {
