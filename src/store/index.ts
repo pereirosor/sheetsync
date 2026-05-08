@@ -415,22 +415,27 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   restoreSession: async () => {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) { set({ loading: false }); return; }
-    const session = JSON.parse(raw) as { role: Role; campaignCode: string; characterName?: string };
-    const campaign = await loadCampaign(session.campaignCode);
-    if (!campaign) { sessionStorage.removeItem(SESSION_KEY); set({ loading: false }); return; }
-    const [playerChars, gmChars] = await Promise.all([
-      loadAllCharacters(campaign),
-      loadAllGMCharacters(campaign),
-    ]);
-    set({
-      role: session.role,
-      campaign,
-      characters: { ...playerChars, ...gmChars },
-      currentPlayerName: session.characterName ?? null,
-      loading: false,
-    });
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) { set({ loading: false }); return; }
+      const session = JSON.parse(raw) as { role: Role; campaignCode: string; characterName?: string };
+      const campaign = await loadCampaign(session.campaignCode);
+      if (!campaign) { sessionStorage.removeItem(SESSION_KEY); set({ loading: false }); return; }
+      const [playerChars, gmChars] = await Promise.all([
+        loadAllCharacters(campaign),
+        loadAllGMCharacters(campaign),
+      ]);
+      set({
+        role: session.role,
+        campaign,
+        characters: { ...playerChars, ...gmChars },
+        currentPlayerName: session.characterName ?? null,
+        loading: false,
+      });
+    } catch {
+      sessionStorage.removeItem(SESSION_KEY);
+      set({ loading: false });
+    }
   },
 
   createGMCharacter: (data: GMCharacterFormData) => {
