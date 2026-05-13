@@ -142,6 +142,7 @@ export interface Character {
   items?: string;
   owner: 'player' | 'gm';
   inScene: boolean;
+  avatarDataUrl?: string;
 }
 
 export interface CampaignSettings {

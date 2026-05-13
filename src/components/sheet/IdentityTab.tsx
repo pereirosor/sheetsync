@@ -92,11 +92,14 @@ export default function IdentityTab({ characterName }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="g3">
-        <div className="form-row">
-          <label>Nome</label>
-          <input value={char.name} onChange={(e) => upd('name', e.target.value)} />
-        </div>
+      {/* Nome — largura total */}
+      <div className="form-row">
+        <label>Nome</label>
+        <input value={char.name} onChange={(e) => upd('name', e.target.value)} />
+      </div>
+
+      {/* Linha 1: Raça | Classe */}
+      <div className="g2">
         <div className="form-row">
           <label>Raça</label>
           <select value={char.race} onChange={(e) => handleRaceChange(e.target.value)}>
@@ -191,7 +194,8 @@ export default function IdentityTab({ characterName }: Props) {
         );
       })()}
 
-      <div className="g3">
+      {/* Linha 2: Origem | Nível */}
+      <div className="g2">
         <div className="form-row">
           <label>Origem</label>
           <select value={char.origin} onChange={(e) => updateCharacter(characterName, { origin: e.target.value, originBenefits: [] } as never)}>
@@ -208,12 +212,42 @@ export default function IdentityTab({ characterName }: Props) {
             onChange={(e) => upd('level', Number(e.target.value))}
           />
         </div>
+      </div>
+
+      {/* Linha 3: Tendência | Divindade */}
+      <div className="g2">
         <div className="form-row">
           <label>Tendência</label>
           <select value={char.alignment} onChange={(e) => upd('alignment', e.target.value)}>
             <option value="">— Selecione —</option>
             {ALIGNMENTS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+        </div>
+        <div className="form-row">
+          <label>Divindade</label>
+          <select value={char.deity} onChange={(e) => upd('deity', e.target.value)}>
+            <option value="">— Selecione —</option>
+            {tormenta20.deityList.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Linha 4: Tamanho | Deslocamento */}
+      <div className="g2">
+        <div className="form-row">
+          <label>Tamanho</label>
+          <select value={char.size} onChange={(e) => upd('size', e.target.value)}>
+            {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <label>Deslocamento (quadrados)</label>
+          <input
+            type="number" min={0} value={char.speed}
+            onChange={(e) => upd('speed', Number(e.target.value))}
+          />
         </div>
       </div>
 
@@ -266,35 +300,10 @@ export default function IdentityTab({ characterName }: Props) {
         );
       })()}
 
-      <div className="g3">
-        <div className="form-row">
-          <label>Divindade</label>
-          <select value={char.deity} onChange={(e) => upd('deity', e.target.value)}>
-            <option value="">— Selecione —</option>
-            {tormenta20.deityList.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-row">
-          <label>Tamanho</label>
-          <select value={char.size} onChange={(e) => upd('size', e.target.value)}>
-            {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="form-row">
-          <label>Deslocamento (quadrados)</label>
-          <input
-            type="number" min={0} value={char.speed}
-            onChange={(e) => upd('speed', Number(e.target.value))}
-          />
-        </div>
-      </div>
-
       <hr className="div" />
       <p className="sec-title">Estatísticas Vitais</p>
 
-      <div className="g3">
+      <div className="g2">
         <div className="form-row">
           <label>PV Máximo</label>
           <input
@@ -314,17 +323,6 @@ export default function IdentityTab({ characterName }: Props) {
             onChange={(e) => {
               updateCharacter(characterName, {
                 vitals: { ...char.vitals, hp: { ...char.vitals.hp, current: Number(e.target.value) } },
-              });
-            }}
-          />
-        </div>
-        <div className="form-row">
-          <label>Classe de Armadura</label>
-          <input
-            type="number" min={0} value={char.vitals.ac}
-            onChange={(e) => {
-              updateCharacter(characterName, {
-                vitals: { ...char.vitals, ac: Number(e.target.value) },
               });
             }}
           />
@@ -355,6 +353,18 @@ export default function IdentityTab({ characterName }: Props) {
             }}
           />
         </div>
+      </div>
+
+      <div className="form-row">
+        <label>Classe de Armadura</label>
+        <input
+          type="number" min={0} value={char.vitals.ac}
+          onChange={(e) => {
+            updateCharacter(characterName, {
+              vitals: { ...char.vitals, ac: Number(e.target.value) },
+            });
+          }}
+        />
       </div>
     </div>
   );

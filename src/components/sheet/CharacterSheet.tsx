@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
+import { calcMod2 } from '../../systems/tormenta20';
 import ProgressBar from '../ui/ProgressBar';
 import Badge from '../ui/Badge';
+import AvatarUpload from './AvatarUpload';
 import IdentityTab from './IdentityTab';
 import AttributesTab from './AttributesTab';
 import SkillsTab from './SkillsTab';
@@ -34,8 +36,9 @@ export default function CharacterSheet() {
   if (!currentPlayerName || !char || !campaign) return null;
 
   const { vitals } = char;
-
-  const avatarInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
+  const fallbackInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
+  const iniMod = calcMod2(char.attributes.dexterity);
+  const iniDisplay = iniMod >= 0 ? `+${iniMod}` : `${iniMod}`;
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -53,9 +56,9 @@ export default function CharacterSheet() {
 
       {/* 3-column layout */}
       <div className="sheet-layout">
-        {/* Sidebar esquerda — resumo do personagem */}
+        {/* Sidebar esquerda */}
         <aside className="sidebar-left">
-          <div className="char-avatar">{avatarInitial}</div>
+          <AvatarUpload characterName={currentPlayerName} fallbackInitial={fallbackInitial} />
 
           <div className="char-nameblock">
             <h3 style={{ fontSize: 15, color: 'var(--gold)', fontFamily: 'Cinzel, serif', marginBottom: 2 }}>
@@ -64,6 +67,32 @@ export default function CharacterSheet() {
             <p style={{ fontSize: 11, color: 'var(--text2)' }}>
               {char.class || '—'} · Nível {char.level}
             </p>
+          </div>
+
+          {/* Mini-grid de identidade */}
+          <div className="identity-mini">
+            <div className="identity-mini-item">
+              <span className="identity-mini-label">Raça</span>
+              <span className="identity-mini-value">{char.race || '—'}</span>
+            </div>
+            <div className="identity-mini-item">
+              <span className="identity-mini-label">Classe</span>
+              <span className="identity-mini-value">{char.class || '—'}</span>
+            </div>
+            <div className="identity-mini-item">
+              <span className="identity-mini-label">Nível</span>
+              <span className="identity-mini-value">{char.level}</span>
+            </div>
+            <div className="identity-mini-item">
+              <span className="identity-mini-label">Origem</span>
+              <span className="identity-mini-value">{char.origin || '—'}</span>
+            </div>
+            {char.alignment && (
+              <div className="identity-mini-item" style={{ gridColumn: '1 / -1' }}>
+                <span className="identity-mini-label">Tendência</span>
+                <span className="identity-mini-value">{char.alignment}</span>
+              </div>
+            )}
           </div>
 
           <div className="vitals-stack">
@@ -93,6 +122,7 @@ export default function CharacterSheet() {
 
           <div className="passives-row">
             <Badge label="CA" value={vitals.ac} color="var(--gold)" />
+            <Badge label="Ini" value={iniDisplay} color="var(--gold)" />
             <Badge label="Desl." value={`${char.speed}q`} />
           </div>
         </aside>
