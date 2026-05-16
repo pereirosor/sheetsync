@@ -143,6 +143,9 @@ export interface Character {
   owner: 'player' | 'gm';
   inScene: boolean;
   avatarDataUrl?: string;
+  created: boolean;
+  classPath?: string;
+  raceBonusChoices?: Partial<Record<AttributeKey, number>>;
 }
 
 export interface CampaignSettings {
@@ -206,6 +209,12 @@ export interface ClassInfo {
   skillChoices: SkillChoiceGroup[];
 }
 
+export interface ClassProficiencyInfo {
+  martialWeapons: boolean;
+  heavyArmor: boolean;
+  shields: boolean;
+}
+
 export interface GameSystem {
   systemId: string;
   name: string;
@@ -225,6 +234,10 @@ export interface GameSystem {
   generalItemData: Record<string, GeneralItemRef>;
   spellData: Record<string, SpellRef>;
   classMagicType: Record<string, 'arcana' | 'divina' | null>;
+  classStartingSpells: Record<string, number>;
+  classPaths: Record<string, string[]>;
+  classProficiencies: Record<string, ClassProficiencyInfo>;
+  variableBonusRaces: string[];
 }
 
 export type SyncMessage =

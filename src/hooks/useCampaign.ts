@@ -32,6 +32,8 @@ export function useCampaign() {
     setJoining(false);
     if (result === 'not_found') {
       setError('Campanha não encontrada. Verifique o código e tente novamente.');
+    } else if (result === 'name_taken') {
+      setError('Já existe um personagem com esse nome nesta campanha. Escolha outro nome.');
     } else if (result !== 'ok') {
       setError(`Erro de conexão: ${result}`);
     }

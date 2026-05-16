@@ -1,5 +1,6 @@
 import { useStore } from '../../store';
 import tormenta20, { calcMod2 } from '../../systems/tormenta20';
+import { resolveSkillId } from '../../utils/resolveSkillId';
 
 interface Props {
   characterName: string;
@@ -18,15 +19,10 @@ export default function IdentityTab({ characterName }: Props) {
 
   if (!char) return null;
 
+  const locked = !!char.created;
+
   const upd = (field: string, value: unknown) =>
     updateCharacter(characterName, { [field]: value } as never);
-
-  const resolveSkillId = (benefitName: string): string | null => {
-    const direct = tormenta20.skillList.find((s) => s.name === benefitName);
-    if (direct) return direct.id;
-    if (benefitName.startsWith('Ofício')) return 'oficio';
-    return null;
-  };
 
   const handleRaceChange = (newRace: string) => {
     const oldMods = tormenta20.raceData[char.race]?.attributeMods;
@@ -101,22 +97,30 @@ export default function IdentityTab({ characterName }: Props) {
       {/* Linha 1: Raça | Classe */}
       <div className="g2">
         <div className="form-row">
-          <label>Raça</label>
-          <select value={char.race} onChange={(e) => handleRaceChange(e.target.value)}>
-            <option value="">— Selecione —</option>
-            {tormenta20.raceList.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+          <label>Raça {locked && <span className="locked-badge">fixado</span>}</label>
+          {locked ? (
+            <span className="locked-value">{char.race}</span>
+          ) : (
+            <select value={char.race} onChange={(e) => handleRaceChange(e.target.value)}>
+              <option value="">— Selecione —</option>
+              {tormenta20.raceList.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="form-row">
-          <label>Classe</label>
-          <select value={char.class} onChange={(e) => handleClassChange(e.target.value)}>
-            <option value="">— Selecione —</option>
-            {tormenta20.classList.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <label>Classe {locked && <span className="locked-badge">fixado</span>}</label>
+          {locked ? (
+            <span className="locked-value">{char.class}{char.classPath ? ` (${char.classPath})` : ''}</span>
+          ) : (
+            <select value={char.class} onChange={(e) => handleClassChange(e.target.value)}>
+              <option value="">— Selecione —</option>
+              {tormenta20.classList.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -197,13 +201,17 @@ export default function IdentityTab({ characterName }: Props) {
       {/* Linha 2: Origem | Nível */}
       <div className="g2">
         <div className="form-row">
-          <label>Origem</label>
-          <select value={char.origin} onChange={(e) => updateCharacter(characterName, { origin: e.target.value, originBenefits: [] } as never)}>
-            <option value="">— Selecione —</option>
-            {tormenta20.originList.map((o) => (
-              <option key={o} value={o}>{o}</option>
-            ))}
-          </select>
+          <label>Origem {locked && <span className="locked-badge">fixado</span>}</label>
+          {locked ? (
+            <span className="locked-value">{char.origin}</span>
+          ) : (
+            <select value={char.origin} onChange={(e) => updateCharacter(characterName, { origin: e.target.value, originBenefits: [] } as never)}>
+              <option value="">— Selecione —</option>
+              {tormenta20.originList.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="form-row">
           <label>Nível</label>
@@ -255,6 +263,7 @@ export default function IdentityTab({ characterName }: Props) {
         const benefits = tormenta20.originData[char.origin];
         const selected: string[] = char.originBenefits ?? [];
         const toggle = (b: string) => {
+          if (locked) return;
           const isChecking = !selected.includes(b) && selected.length < 2;
           const isUnchecking = selected.includes(b);
           if (!isChecking && !isUnchecking) return;
@@ -275,16 +284,21 @@ export default function IdentityTab({ characterName }: Props) {
         };
         return (
           <div style={{ fontSize: '0.85rem', padding: '6px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
-            <b style={{ display: 'block', marginBottom: 2 }}>Benefícios de Origem</b>
-            <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
-              Escolha 2 ({selected.length}/2 marcados)
-            </span>
+            <b style={{ display: 'block', marginBottom: 2 }}>
+              Benefícios de Origem
+              {locked && <span className="locked-badge" style={{ marginLeft: 6 }}>fixado</span>}
+            </b>
+            {!locked && (
+              <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>
+                Escolha 2 ({selected.length}/2 marcados)
+              </span>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
               {benefits.map((b) => {
                 const checked = selected.includes(b);
-                const disabled = !checked && selected.length >= 2;
+                const disabled = locked || (!checked && selected.length >= 2);
                 return (
-                  <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: disabled ? 0.4 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                  <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: locked ? (checked ? 1 : 0.3) : (disabled ? 0.4 : 1), cursor: disabled ? 'not-allowed' : 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={checked}
