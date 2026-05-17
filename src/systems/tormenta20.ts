@@ -467,6 +467,30 @@ const tormenta20: GameSystem = {
     'Cavaleiro': null, 'Guerreiro': null, 'Inventor': null,
     'Ladino': null, 'Lutador': null, 'Nobre': null, 'Paladino': null,
   } as Record<string, 'arcana' | 'divina' | null>,
+  classStartingSpells: {
+    'Arcanista': 3, 'Bardo': 2, 'Clérigo': 3, 'Druida': 2,
+  },
+  classPaths: {
+    'Arcanista': ['Mago', 'Ilusionista', 'Necromante', 'Conjurador', 'Elementalista', 'Bruxo'],
+    'Bardo': ['Bardo das Artes', 'Cabotino', 'Diplomata'],
+  },
+  classProficiencies: {
+    'Arcanista':  { martialWeapons: false, heavyArmor: false, shields: false },
+    'Bárbaro':    { martialWeapons: true,  heavyArmor: false, shields: true  },
+    'Bardo':      { martialWeapons: true,  heavyArmor: false, shields: false },
+    'Bucaneiro':  { martialWeapons: true,  heavyArmor: false, shields: false },
+    'Caçador':    { martialWeapons: true,  heavyArmor: false, shields: true  },
+    'Cavaleiro':  { martialWeapons: true,  heavyArmor: true,  shields: true  },
+    'Clérigo':    { martialWeapons: false, heavyArmor: true,  shields: true  },
+    'Druida':     { martialWeapons: false, heavyArmor: false, shields: true  },
+    'Guerreiro':  { martialWeapons: true,  heavyArmor: true,  shields: true  },
+    'Inventor':   { martialWeapons: false, heavyArmor: false, shields: false },
+    'Ladino':     { martialWeapons: false, heavyArmor: false, shields: false },
+    'Lutador':    { martialWeapons: false, heavyArmor: false, shields: false },
+    'Nobre':      { martialWeapons: true,  heavyArmor: true,  shields: true  },
+    'Paladino':   { martialWeapons: true,  heavyArmor: true,  shields: true  },
+  },
+  variableBonusRaces: ['Humano', 'Lefou', 'Sereia/Tritão', 'Osteon'],
   weaponData: {
     // Armas Simples — Leves
     'Adaga':              { damage: '1d4',     damageType: 'Perfuração',        critical: '19',    range: 'Curto', weight: 0.5, category: 'simples', properties: 'Leve, Ágil, Arremesso' },

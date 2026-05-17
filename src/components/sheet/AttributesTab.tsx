@@ -21,7 +21,10 @@ export default function AttributesTab({ characterName }: Props) {
 
   if (!char) return null;
 
+  const locked = !!char.created;
+
   const setAttr = (key: AttributeKey, value: number) => {
+    if (locked) return;
     updateCharacter(characterName, {
       attributes: { ...char.attributes, [key]: value },
     });
@@ -29,7 +32,10 @@ export default function AttributesTab({ characterName }: Props) {
 
   return (
     <div>
-      <p className="sec-title">Atributos</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <p className="sec-title" style={{ margin: 0 }}>Atributos</p>
+        {locked && <span className="locked-badge">fixados na criação</span>}
+      </div>
       <div className="g3" style={{ gap: 12 }}>
         {ATTRS.map(({ key, label, abbr }) => {
           const val = char.attributes[key];
@@ -37,14 +43,20 @@ export default function AttributesTab({ characterName }: Props) {
           return (
             <div key={key} className="attr-box">
               <div className="attr-name">{abbr}</div>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                value={val}
-                onChange={(e) => setAttr(key, Number(e.target.value))}
-                style={{ textAlign: 'center', fontSize: 22, fontWeight: 700, padding: '4px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 4, width: '100%', marginBottom: 4 }}
-              />
+              {locked ? (
+                <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 700, padding: '4px', marginBottom: 4, color: 'var(--text)' }}>
+                  {val}
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={val}
+                  onChange={(e) => setAttr(key, Number(e.target.value))}
+                  style={{ textAlign: 'center', fontSize: 22, fontWeight: 700, padding: '4px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 4, width: '100%', marginBottom: 4 }}
+                />
+              )}
               <div className="attr-mod" style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>{label}</div>
               <div className="attr-mod">
                 {mod >= 0 ? '+' : ''}{mod}

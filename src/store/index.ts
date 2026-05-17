@@ -66,6 +66,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   owner: ch.owner ?? 'player',
   inScene: ch.inScene ?? false,
   originBenefits: ch.originBenefits ?? [],
+  created: ch.created ?? (!!ch.race && !!ch.class && !!ch.origin),
 });
 
 async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {
@@ -127,6 +128,7 @@ export const createDefaultCharacter = (campaignCode: string, name: string): Char
   originBenefits: [],
   owner: 'player',
   inScene: false,
+  created: false,
 });
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -145,7 +147,7 @@ interface AppState {
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
   confirmGMEntry: () => Promise<void>;
-  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | string>;
+  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | string>;
   leaveCampaign: () => void;
   updateCharacter: (name: string, updates: Partial<Character>) => void;
   updateVital: (characterName: string, field: VitalKey, delta: number) => void;
@@ -228,7 +230,8 @@ export const useStore = create<AppState>((set, get) => ({
       .eq('campaign_code', code)
       .eq('name', characterName)
       .single();
-    character = existing ? normalizeCharacter(existing.data as Character) : createDefaultCharacter(code, characterName);
+    if (existing) return 'name_taken';
+    character = createDefaultCharacter(code, characterName);
 
     if (!campaign.playerNames.includes(characterName)) {
       campaign.playerNames = [...campaign.playerNames, characterName];
@@ -486,6 +489,7 @@ export const useStore = create<AppState>((set, get) => ({
       items: data.items,
       owner: 'gm',
       inScene: false,
+      created: true,
     };
     const updatedCampaign: Campaign = {
       ...campaign,
