@@ -32,6 +32,7 @@ export default function CharacterSheet() {
     s.currentPlayerName ? s.characters[s.currentPlayerName] : null,
   );
   const leaveCampaign = useStore((s) => s.leaveCampaign);
+  const combatState = useStore((s) => s.combatState);
 
   if (!currentPlayerName || !char || !campaign) return null;
 
@@ -125,6 +126,32 @@ export default function CharacterSheet() {
             <Badge label="Ini" value={iniDisplay} color="var(--gold)" />
             <Badge label="Desl." value={`${char.speed}q`} />
           </div>
+
+          {combatState?.active && (
+            <div className="combat-status">
+              <div className="combat-status-header">
+                <span>⚔</span>
+                <span>Combate · Rodada {combatState.round}</span>
+              </div>
+              <div className="combat-status-turn">
+                Vez de:{' '}
+                <strong style={{ color: 'var(--gold)' }}>
+                  {combatState.combatants[combatState.currentIndex]?.name ?? '—'}
+                </strong>
+              </div>
+              <div className="combat-status-list">
+                {combatState.combatants.map((c, i) => (
+                  <div
+                    key={c.name}
+                    className={`combat-status-item${i === combatState.currentIndex ? ' active' : ''}${c.name === currentPlayerName ? ' me' : ''}`}
+                  >
+                    <span className="combat-status-ini">{c.initiative}</span>
+                    <span>{c.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* Área central — tabs */}
