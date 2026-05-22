@@ -268,6 +268,9 @@ export type SyncMessage =
   | { type: 'CAMPAIGN_SETTINGS_UPDATE'; payload: { campaignCode: string; settings: CampaignSettings } }
   | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } }
   | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } }
+  | { type: 'COMBAT_REQUEST'; payload: { campaignCode: string } }
+  | { type: 'COMBAT_INITIATIVE_ROLL'; payload: { campaignCode: string; characterName: string; roll: number } }
+  | { type: 'COMBAT_CANCEL'; payload: { campaignCode: string } }
   | { type: 'COMBAT_START'; payload: { campaignCode: string; combatants: CombatantEntry[] } }
   | { type: 'COMBAT_NEXT_TURN'; payload: { campaignCode: string; currentIndex: number; round: number } }
   | { type: 'COMBAT_END'; payload: { campaignCode: string } };

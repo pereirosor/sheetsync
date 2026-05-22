@@ -19,11 +19,12 @@ export default function GMPanel() {
   const addToast = useStore((s) => s.addToast);
 
   const combatState = useStore((s) => s.combatState);
+  const combatPendingRolls = useStore((s) => s.combatPendingRolls);
+  const requestCombat = useStore((s) => s.requestCombat);
 
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
   const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
-  const [showCombatModal, setShowCombatModal] = useState(false);
 
   if (!campaign) return null;
 
@@ -139,7 +140,7 @@ export default function GMPanel() {
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
-                    onClick={() => setShowCombatModal(true)}
+                    onClick={requestCombat}
                   >
                     ⚔ Iniciar Combate
                   </button>
@@ -216,7 +217,7 @@ export default function GMPanel() {
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
-      {showCombatModal && <CombatInitModal onClose={() => setShowCombatModal(false)} />}
+      {combatPendingRolls !== null && <CombatInitModal />}
 
       {/* Confirm rest modal */}
       {confirmRest && (
