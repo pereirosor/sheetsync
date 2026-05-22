@@ -1030,3 +1030,125 @@ input.num-sm {
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* ──────────────────────────────────────────
+   CONDIÇÕES DE STATUS
+   ────────────────────────────────────────── */
+
+/* Wrapper para tooltip */
+.condition-badge-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Tooltip */
+.condition-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text);
+  white-space: normal;
+  width: 190px;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+  line-height: 1.45;
+}
+
+/* Tooltip acima */
+.condition-tooltip--above {
+  bottom: calc(100% + 5px);
+  top: auto;
+}
+
+/* Tooltip abaixo (padrão) */
+.condition-tooltip:not(.condition-tooltip--above) {
+  top: calc(100% + 5px);
+  bottom: auto;
+}
+
+.condition-badge-wrapper:hover .condition-tooltip {
+  display: block;
+}
+
+/* Badge de condição ativa (leitura) */
+.condition-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: default;
+}
+
+.condition-badge--active {
+  background: rgba(224, 82, 82, 0.12);
+  border-color: rgba(224, 82, 82, 0.45);
+  color: #e08080;
+}
+
+/* Grid de chips do picker */
+.condition-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Chip togglável no picker do GM */
+.condition-chip {
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--t);
+}
+
+.condition-chip:hover {
+  border-color: var(--border-light);
+  color: var(--text);
+}
+
+.condition-chip--active {
+  background: rgba(224, 82, 82, 0.15);
+  border-color: rgba(224, 82, 82, 0.5);
+  color: #e08080;
+}
+
+.condition-chip--active:hover {
+  background: rgba(224, 82, 82, 0.25);
+  border-color: rgba(224, 82, 82, 0.7);
+  color: #f09090;
+}
+
+/* Seção de condições na ficha do jogador */
+.player-conditions {
+  background: rgba(224, 82, 82, 0.05);
+  border: 1px solid rgba(224, 82, 82, 0.2);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+}
+
+.player-conditions-title {
+  font-size: 9px;
+  color: #e08080;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+  font-weight: 600;
+}

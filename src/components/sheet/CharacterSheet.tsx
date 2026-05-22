@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
 import { calcMod2 } from '../../systems/tormenta20';
+import { CONDITION_MAP } from '../../data/conditions';
 import ProgressBar from '../ui/ProgressBar';
 import Badge from '../ui/Badge';
 import AvatarUpload from './AvatarUpload';
@@ -129,6 +130,21 @@ export default function CharacterSheet() {
             <Badge label="Ini" value={iniDisplay} color="var(--gold)" />
             <Badge label="Desl." value={`${char.speed}q`} />
           </div>
+
+          {/* Active conditions */}
+          {(char.conditions ?? []).length > 0 && (
+            <div className="player-conditions">
+              <div className="player-conditions-title">Condições Ativas</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {(char.conditions ?? []).map((c) => (
+                  <div key={c} className="condition-badge-wrapper">
+                    <span className="condition-badge condition-badge--active">{c}</span>
+                    <div className="condition-tooltip condition-tooltip--above">{CONDITION_MAP[c]?.description ?? c}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {combatState?.active && (
             <div className="combat-status">

@@ -71,6 +71,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   inScene: ch.inScene ?? false,
   originBenefits: ch.originBenefits ?? [],
   created: ch.created ?? (!!ch.race && !!ch.class && !!ch.origin),
+  conditions: ch.conditions ?? [],
 });
 
 async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {
@@ -206,6 +207,7 @@ interface AppState {
   createGMNote: () => GMNote;
   updateGMNote: (id: string, patch: Partial<Pick<GMNote, 'title' | 'body'>>) => Promise<void>;
   deleteGMNote: (id: string) => string | null;
+  toggleCondition: (characterName: string, condition: string) => void;
 }
 
 const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
@@ -800,5 +802,16 @@ export const useStore = create<AppState>((set, get) => ({
     const remaining = gmNotes.filter((n) => n.id !== id);
     set({ gmNotes: remaining });
     return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+  },
+
+  toggleCondition: (characterName: string, condition: string) => {
+    const { characters } = get();
+    const char = characters[characterName];
+    if (!char) return;
+    const current = char.conditions ?? [];
+    const updated = current.includes(condition)
+      ? current.filter((c) => c !== condition)
+      : [...current, condition];
+    get().updateCharacter(characterName, { conditions: updated });
   },
 }));

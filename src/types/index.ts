@@ -153,6 +153,7 @@ export interface Character {
   created: boolean;
   classPath?: string;
   raceBonusChoices?: Partial<Record<AttributeKey, number>>;
+  conditions?: string[];
 }
 
 export interface CampaignSettings {

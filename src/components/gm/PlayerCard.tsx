@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
 import type { VitalKey } from '../../types';
+import { CONDITIONS, CONDITION_MAP } from '../../data/conditions';
 import ProgressBar from '../ui/ProgressBar';
 import Badge from '../ui/Badge';
 import NPCSheetModal from './NPCSheetModal';
@@ -16,6 +17,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const campaign = useStore((s) => s.campaign);
   const updateVital = useStore((s) => s.updateVital);
+  const toggleCondition = useStore((s) => s.toggleCondition);
   const addToast = useStore((s) => s.addToast);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
 
@@ -23,6 +25,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const [isHeal, setIsHeal] = useState(false);
   const [activeVital, setActiveVital] = useState<ActiveVital>('hp');
   const [showSheet, setShowSheet] = useState(false);
+  const [showConditionPicker, setShowConditionPicker] = useState(false);
 
   if (!char || !campaign) return null;
 
@@ -42,6 +45,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
 
   const vitals = char.vitals;
   const hasMana = vitals.mana.max > 0;
+  const activeConditions = char.conditions ?? [];
 
   const VITAL_OPTS: { key: VitalKey; label: string; color: string; show: boolean }[] = [
     { key: 'hp', label: 'PV', color: 'var(--hp)', show: true },
@@ -122,6 +126,61 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
                 placeholder="0" style={{ width: 70, textAlign: 'center', fontSize: 13 }} />
               <button className="btn btn-secondary btn-sm" onClick={applyCustom}>Aplicar</button>
             </div>
+          </div>
+
+          {/* Conditions section */}
+          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px' }}>
+            <div className="flex-between" style={{ marginBottom: activeConditions.length > 0 || showConditionPicker ? 8 : 0 }}>
+              <span style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                Condições
+                {activeConditions.length > 0 && (
+                  <span style={{ marginLeft: 6, color: 'var(--hp)', fontWeight: 700 }}>{activeConditions.length}</span>
+                )}
+              </span>
+              <button
+                className="btn btn-secondary btn-xs"
+                onClick={() => setShowConditionPicker(!showConditionPicker)}
+                style={{ fontSize: 10 }}
+              >
+                {showConditionPicker ? 'Ocultar' : 'Editar'}
+              </button>
+            </div>
+
+            {/* Active condition badges */}
+            {activeConditions.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: showConditionPicker ? 8 : 0 }}>
+                {activeConditions.map((c) => (
+                  <div key={c} className="condition-badge-wrapper">
+                    <span className="condition-badge condition-badge--active">{c}</span>
+                    <div className="condition-tooltip">{CONDITION_MAP[c]?.description ?? c}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeConditions.length === 0 && !showConditionPicker && (
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>Nenhuma</span>
+            )}
+
+            {/* Condition picker grid */}
+            {showConditionPicker && (
+              <div className="condition-picker">
+                {CONDITIONS.map((cond) => {
+                  const active = activeConditions.includes(cond.name);
+                  return (
+                    <div key={cond.name} className="condition-badge-wrapper">
+                      <button
+                        className={`condition-chip${active ? ' condition-chip--active' : ''}`}
+                        onClick={() => toggleCondition(characterName, cond.name)}
+                      >
+                        {cond.name}
+                      </button>
+                      <div className="condition-tooltip condition-tooltip--above">{cond.description}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {isNPC && (
