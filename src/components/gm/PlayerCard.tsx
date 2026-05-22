@@ -58,7 +58,19 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
         <div className="gm-card-header">
           <div className="flex-between">
             <div>
-              <h3 style={{ fontSize: 15, color: isNPC ? 'var(--mana)' : 'var(--gold)' }}>{char.name || characterName}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <h3 style={{ fontSize: 15, color: isNPC ? 'var(--mana)' : 'var(--gold)' }}>{char.name || characterName}</h3>
+                {char.pendingLevelUp && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '.06em',
+                    padding: '1px 6px', borderRadius: 10,
+                    background: 'rgba(201,168,76,.2)', border: '1px solid rgba(201,168,76,.5)',
+                    color: 'var(--gold)',
+                  }}>
+                    ⬆ LVL UP
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
                 {[char.race, char.class].filter(Boolean).join(' · ')} · Nível {char.level}
               </p>

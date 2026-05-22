@@ -153,6 +153,22 @@ export default function IdentityTab({ characterName }: Props) {
                 ))}
               </div>
             )}
+
+            {(char.powers ?? []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p className="sec-title">Poderes & Talentos</p>
+                {(char.powers ?? []).map((pw) => {
+                  const def = tormenta20.generalPowers.find((p) => p.name === pw.name);
+                  return (
+                    <div key={`${pw.name}-${pw.level}`} style={{ fontSize: '0.82rem', lineHeight: 1.5, padding: '5px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+                      <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>Nível {pw.level} · {def?.group ?? 'Geral'}</span><br />
+                      <b>{pw.name}</b><br />
+                      {def && <span style={{ color: 'var(--muted)' }}>{def.description}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {cd.skillChoices.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <p className="sec-title">Perícias de Classe</p>

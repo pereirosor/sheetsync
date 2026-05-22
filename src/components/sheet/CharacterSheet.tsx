@@ -13,6 +13,7 @@ import SpellsTab from './SpellsTab';
 import NotesTab from './NotesTab';
 import DiceRoller from './DiceRoller';
 import CombatRollModal from './CombatRollModal';
+import LevelUpWizard from '../levelup/LevelUpWizard';
 
 type TabId = 'identity' | 'attributes' | 'skills' | 'equipment' | 'spells' | 'notes';
 
@@ -27,6 +28,7 @@ const TABS: { id: TabId; label: string }[] = [
 
 export default function CharacterSheet() {
   const [activeTab, setActiveTab] = useState<TabId>('identity');
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   const currentPlayerName = useStore((s) => s.currentPlayerName);
   const campaign = useStore((s) => s.campaign);
@@ -46,6 +48,9 @@ export default function CharacterSheet() {
   return (
     <>
     <CombatRollModal />
+    {showLevelUp && (
+      <LevelUpWizard characterName={currentPlayerName} onClose={() => setShowLevelUp(false)} />
+    )}
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div className="page-header">
@@ -54,9 +59,20 @@ export default function CharacterSheet() {
             Campanha <strong style={{ color: 'var(--text)' }}>{campaign.code}</strong>
           </p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
-          Sair
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {char.pendingLevelUp && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ color: 'var(--gold)', borderColor: 'rgba(201,168,76,.5)', fontWeight: 600 }}
+              onClick={() => setShowLevelUp(true)}
+            >
+              ⬆ Subir de Nível
+            </button>
+          )}
+          <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
+            Sair
+          </button>
+        </div>
       </div>
 
       {/* 3-column layout */}

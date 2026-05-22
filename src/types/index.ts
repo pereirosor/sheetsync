@@ -154,6 +154,8 @@ export interface Character {
   classPath?: string;
   raceBonusChoices?: Partial<Record<AttributeKey, number>>;
   conditions?: string[];
+  powers?: { name: string; level: number }[];
+  pendingLevelUp?: boolean;
 }
 
 export interface CampaignSettings {
@@ -223,6 +225,31 @@ export interface ClassProficiencyInfo {
   shields: boolean;
 }
 
+export type PowerGroup = 'Combate' | 'Destino' | 'Magia' | 'Concedidos' | 'Tormenta';
+
+export interface PowerPrereqs {
+  raw: string;
+  attributes?: Partial<Record<AttributeKey, number>>;
+  powers?: string[];
+  skillsTrained?: string[];
+  minLevel?: number;
+  other?: string[];
+}
+
+export interface GeneralPower {
+  name: string;
+  group: PowerGroup;
+  description: string;
+  prereqs?: PowerPrereqs;
+}
+
+export interface CasterProgression {
+  startingSpells: number;
+  spellsPerLevel: number;
+  evenLevelsOnly?: boolean;
+  circleAtLevel: Record<number, number>;
+}
+
 export interface GameSystem {
   systemId: string;
   name: string;
@@ -246,6 +273,9 @@ export interface GameSystem {
   classPaths: Record<string, string[]>;
   classProficiencies: Record<string, ClassProficiencyInfo>;
   variableBonusRaces: string[];
+  classProgression: Record<string, string[][]>;
+  casterProgression: Record<string, CasterProgression>;
+  generalPowers: GeneralPower[];
 }
 
 export interface CombatantEntry {
@@ -274,7 +304,9 @@ export type SyncMessage =
   | { type: 'COMBAT_CANCEL'; payload: { campaignCode: string } }
   | { type: 'COMBAT_START'; payload: { campaignCode: string; combatants: CombatantEntry[] } }
   | { type: 'COMBAT_NEXT_TURN'; payload: { campaignCode: string; currentIndex: number; round: number } }
-  | { type: 'COMBAT_END'; payload: { campaignCode: string } };
+  | { type: 'COMBAT_END'; payload: { campaignCode: string } }
+  | { type: 'LEVEL_UP_RELEASED'; payload: { campaignCode: string } }
+  | { type: 'LEVEL_UP_RESET'; payload: { campaignCode: string } };
 
 export interface GMNote {
   id: string;
