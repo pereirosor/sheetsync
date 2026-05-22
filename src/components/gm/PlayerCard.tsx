@@ -16,7 +16,6 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const campaign = useStore((s) => s.campaign);
   const updateVital = useStore((s) => s.updateVital);
-  const applyRest = useStore((s) => s.applyRest);
   const addToast = useStore((s) => s.addToast);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
 
@@ -39,16 +38,6 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
     if (!val || isNaN(val)) return;
     applyDelta(activeVital, isHeal ? val : -val);
     setCustomDelta('');
-  };
-
-  const handleShortRest = () => {
-    applyRest(characterName, 'short');
-    addToast(`${char.name}: Descanso curto!`, 'heal');
-  };
-
-  const handleLongRest = () => {
-    applyRest(characterName, 'long');
-    addToast(`${char.name}: Descanso longo! (PV/Mana cheios)`, 'success');
   };
 
   const vitals = char.vitals;
@@ -133,18 +122,6 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
                 placeholder="0" style={{ width: 70, textAlign: 'center', fontSize: 13 }} />
               <button className="btn btn-secondary btn-sm" onClick={applyCustom}>Aplicar</button>
             </div>
-          </div>
-
-          {/* Rest buttons */}
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-secondary btn-sm" style={{ flex: 1, fontSize: 11 }} onClick={handleShortRest}>
-              ☽ Descanso Curto
-            </button>
-            <button className="btn btn-secondary btn-sm"
-              style={{ flex: 1, fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
-              onClick={handleLongRest}>
-              ☀ Descanso Longo
-            </button>
           </div>
 
           {isNPC && (

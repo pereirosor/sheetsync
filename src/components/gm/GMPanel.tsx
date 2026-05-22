@@ -7,19 +7,42 @@ import GMChat from './GMChat';
 import GMNotesTab from './GMNotesTab';
 
 type GMTab = 'scene' | 'characters' | 'notes';
+type RestType = 'short' | 'long';
 
 export default function GMPanel() {
   const campaign = useStore((s) => s.campaign);
   const characters = useStore((s) => s.characters);
   const leaveCampaign = useStore((s) => s.leaveCampaign);
+  const applyRest = useStore((s) => s.applyRest);
+  const addToast = useStore((s) => s.addToast);
+
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
+  const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
 
   if (!campaign) return null;
 
   const playerNames = campaign.playerNames;
   const gmCharacterNames = campaign.gmCharacterNames ?? [];
   const inSceneNPCNames = gmCharacterNames.filter((n) => characters[n]?.inScene);
+  const sceneTotal = playerNames.length + inSceneNPCNames.length;
+
+  function handleMassRest(restType: RestType) {
+    [...playerNames, ...inSceneNPCNames].forEach((name) => applyRest(name, restType));
+    addToast(
+      restType === 'long' ? 'Descanso Longo aplicado a todos!' : 'Descanso Curto aplicado a todos!',
+      'heal',
+    );
+    setConfirmRest(null);
+  }
+
+  const restLabel = confirmRest === 'long' ? 'Descanso Longo' : 'Descanso Curto';
+  const sceneDesc =
+    playerNames.length > 0 && inSceneNPCNames.length > 0
+      ? `${playerNames.length} jogador${playerNames.length !== 1 ? 'es' : ''} e ${inSceneNPCNames.length} NPC${inSceneNPCNames.length !== 1 ? 's' : ''}`
+      : playerNames.length > 0
+        ? `${playerNames.length} jogador${playerNames.length !== 1 ? 'es' : ''}`
+        : `${inSceneNPCNames.length} NPC${inSceneNPCNames.length !== 1 ? 's' : ''}`;
 
   return (
     <div className="gm-root">
@@ -101,6 +124,26 @@ export default function GMPanel() {
         {/* Cena Atual */}
         {activeTab === 'scene' && (
           <>
+            {/* Mass rest bar */}
+            {sceneTotal > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11 }}
+                  onClick={() => setConfirmRest('short')}
+                >
+                  ☽ Descanso Curto para Todos
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
+                  onClick={() => setConfirmRest('long')}
+                >
+                  ☀ Descanso Longo para Todos
+                </button>
+              </div>
+            )}
+
             {playerNames.length === 0 && inSceneNPCNames.length === 0 ? (
               <div className="empty-state">
                 <h3>Aguardando jogadores...</h3>
@@ -156,6 +199,36 @@ export default function GMPanel() {
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
+
+      {/* Confirm rest modal */}
+      {confirmRest && (
+        <div className="modal-overlay" onClick={() => setConfirmRest(null)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Confirmar {restLabel}</h3>
+            <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 6 }}>
+              Aplicar <strong style={{ color: 'var(--text)' }}>{restLabel}</strong> para todos os
+              personagens da cena?
+            </p>
+            <p style={{ color: 'var(--text2)', fontSize: 12, marginBottom: 20 }}>
+              {sceneDesc} serão afetados.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setConfirmRest(null)}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={confirmRest === 'long'
+                  ? { color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }
+                  : { color: 'var(--success)', borderColor: 'rgba(82,201,122,.4)' }}
+                onClick={() => handleMassRest(confirmRest)}
+              >
+                {confirmRest === 'long' ? '☀' : '☽'} Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
