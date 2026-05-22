@@ -5,6 +5,8 @@ import CampaignSettings from './CampaignSettings';
 import GMCharactersTab from './GMCharactersTab';
 import GMChat from './GMChat';
 import GMNotesTab from './GMNotesTab';
+import CombatTracker from './CombatTracker';
+import CombatInitModal from './CombatInitModal';
 
 type GMTab = 'scene' | 'characters' | 'notes';
 type RestType = 'short' | 'long';
@@ -16,9 +18,12 @@ export default function GMPanel() {
   const applyRest = useStore((s) => s.applyRest);
   const addToast = useStore((s) => s.addToast);
 
+  const combatState = useStore((s) => s.combatState);
+
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
   const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
+  const [showCombatModal, setShowCombatModal] = useState(false);
 
   if (!campaign) return null;
 
@@ -124,9 +129,21 @@ export default function GMPanel() {
         {/* Cena Atual */}
         {activeTab === 'scene' && (
           <>
-            {/* Mass rest bar */}
+            {/* Combat tracker (when active) */}
+            <CombatTracker />
+
+            {/* Action bar */}
             {sceneTotal > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {!combatState?.active && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
+                    onClick={() => setShowCombatModal(true)}
+                  >
+                    ⚔ Iniciar Combate
+                  </button>
+                )}
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: 11 }}
@@ -199,6 +216,7 @@ export default function GMPanel() {
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
+      {showCombatModal && <CombatInitModal onClose={() => setShowCombatModal(false)} />}
 
       {/* Confirm rest modal */}
       {confirmRest && (

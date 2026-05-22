@@ -852,3 +852,141 @@ input.num-sm {
     max-height: 200px;
   }
 }
+
+/* ──────────────────────────────────────────
+   TRACKER DE INICIATIVA
+   ────────────────────────────────────────── */
+
+.combat-tracker {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.combat-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card2);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.combat-round-badge {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1px 10px;
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.combat-list { display: flex; flex-direction: column; }
+
+.combat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background var(--t);
+}
+.combat-item:last-child { border-bottom: none; }
+.combat-item.active {
+  background: rgba(201,168,76,.08);
+  border-left: 3px solid var(--gold);
+}
+
+.combat-ini {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.combat-name { flex: 1; font-weight: 500; }
+.combat-hp { font-size: 11px; color: var(--text2); }
+
+/* ── Modal de iniciativa ── */
+.cinit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-card2);
+}
+
+.cinit-name { flex: 1; min-width: 0; }
+
+.cinit-input {
+  width: 60px;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* ── Status de combate (ficha do jogador) ── */
+.combat-status {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.combat-status-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.combat-status-turn {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+
+.combat-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.combat-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  color: var(--text2);
+}
+.combat-status-item.active { background: rgba(201,168,76,.08); color: var(--gold); }
+.combat-status-item.me { font-weight: 600; color: var(--text); }
+.combat-status-item.active.me { color: var(--gold); }
+
+.combat-status-ini {
+  min-width: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  flex-shrink: 0;
+}

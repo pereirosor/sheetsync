@@ -5,6 +5,8 @@ import type {
   CampaignSettings,
   Character,
   ChatMessage,
+  CombatantEntry,
+  CombatState,
   DiceRollEntry,
   GMCharacterFormData,
   GMNote,
@@ -168,6 +170,7 @@ interface AppState {
   toasts: ToastItem[];
   diceLog: DiceRollEntry[];
   chatLog: ChatMessage[];
+  combatState: CombatState | null;
 
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
@@ -190,6 +193,9 @@ interface AppState {
   toggleNPCInScene: (name: string) => void;
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
   sendChatMessage: (text: string) => void;
+  startCombat: (combatants: CombatantEntry[]) => void;
+  nextTurn: () => void;
+  endCombat: () => void;
   gmNotes: GMNote[];
   loadGMNotes: () => Promise<void>;
   createGMNote: () => GMNote;
@@ -218,6 +224,7 @@ export const useStore = create<AppState>((set, get) => ({
   toasts: [],
   diceLog: [],
   chatLog: [],
+  combatState: null,
   gmNotes: [],
 
   initChannel: (campaignCode: string) => {
@@ -306,7 +313,7 @@ export const useStore = create<AppState>((set, get) => ({
     const ch = get().channel;
     if (ch) void supabase.removeChannel(ch);
     sessionStorage.removeItem(SESSION_KEY);
-    set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null });
+    set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null, combatState: null });
   },
 
   updateCharacter: (name: string, updates: Partial<Character>) => {
@@ -457,6 +464,20 @@ export const useStore = create<AppState>((set, get) => ({
         const { senderName, text } = msg.payload;
         const entry: ChatMessage = { id: genId(), senderName, text, timestamp: Date.now() };
         set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
+        break;
+      }
+      case 'COMBAT_START': {
+        const { combatants } = msg.payload;
+        set({ combatState: { active: true, combatants, currentIndex: 0, round: 1 } });
+        break;
+      }
+      case 'COMBAT_NEXT_TURN': {
+        const { currentIndex, round } = msg.payload;
+        set((s) => s.combatState ? { combatState: { ...s.combatState, currentIndex, round } } : {});
+        break;
+      }
+      case 'COMBAT_END': {
+        set({ combatState: null });
         break;
       }
     }
@@ -656,6 +677,34 @@ export const useStore = create<AppState>((set, get) => ({
     const entry: ChatMessage = { id: genId(), senderName, text: trimmed, timestamp: Date.now() };
     set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
     broadcast(channel, { type: 'CHAT_MESSAGE', payload: { campaignCode: campaign.code, senderName, text: trimmed } });
+  },
+
+  startCombat: (combatants: CombatantEntry[]) => {
+    const { campaign, channel } = get();
+    if (!campaign) return;
+    const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
+    const state: CombatState = { active: true, combatants: sorted, currentIndex: 0, round: 1 };
+    set({ combatState: state });
+    broadcast(channel, { type: 'COMBAT_START', payload: { campaignCode: campaign.code, combatants: sorted } });
+  },
+
+  nextTurn: () => {
+    const { combatState, campaign, channel } = get();
+    if (!combatState || !campaign) return;
+    const len = combatState.combatants.length;
+    if (len === 0) return;
+    const nextIndex = (combatState.currentIndex + 1) % len;
+    const nextRound = nextIndex === 0 ? combatState.round + 1 : combatState.round;
+    const updated: CombatState = { ...combatState, currentIndex: nextIndex, round: nextRound };
+    set({ combatState: updated });
+    broadcast(channel, { type: 'COMBAT_NEXT_TURN', payload: { campaignCode: campaign.code, currentIndex: nextIndex, round: nextRound } });
+  },
+
+  endCombat: () => {
+    const { campaign, channel } = get();
+    if (!campaign) return;
+    set({ combatState: null });
+    broadcast(channel, { type: 'COMBAT_END', payload: { campaignCode: campaign.code } });
   },
 
   loadGMNotes: async () => {

@@ -247,6 +247,19 @@ export interface GameSystem {
   variableBonusRaces: string[];
 }
 
+export interface CombatantEntry {
+  name: string;
+  initiative: number;
+  isNPC: boolean;
+}
+
+export interface CombatState {
+  active: boolean;
+  combatants: CombatantEntry[];
+  currentIndex: number;
+  round: number;
+}
+
 export type SyncMessage =
   | { type: 'PLAYER_JOIN'; payload: { campaignCode: string; character: Character } }
   | { type: 'SHEET_UPDATE'; payload: { campaignCode: string; character: Character } }
@@ -254,7 +267,10 @@ export type SyncMessage =
   | { type: 'REST_APPLIED'; payload: { campaignCode: string; characterName: string; restType: 'short' | 'long' } }
   | { type: 'CAMPAIGN_SETTINGS_UPDATE'; payload: { campaignCode: string; settings: CampaignSettings } }
   | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } }
-  | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } };
+  | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } }
+  | { type: 'COMBAT_START'; payload: { campaignCode: string; combatants: CombatantEntry[] } }
+  | { type: 'COMBAT_NEXT_TURN'; payload: { campaignCode: string; currentIndex: number; round: number } }
+  | { type: 'COMBAT_END'; payload: { campaignCode: string } };
 
 export interface GMNote {
   id: string;
