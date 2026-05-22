@@ -11,6 +11,7 @@ import EquipmentTab from './EquipmentTab';
 import SpellsTab from './SpellsTab';
 import NotesTab from './NotesTab';
 import DiceRoller from './DiceRoller';
+import CombatRollModal from './CombatRollModal';
 
 type TabId = 'identity' | 'attributes' | 'skills' | 'equipment' | 'spells' | 'notes';
 
@@ -42,6 +43,8 @@ export default function CharacterSheet() {
   const iniDisplay = iniMod >= 0 ? `+${iniMod}` : `${iniMod}`;
 
   return (
+    <>
+    <CombatRollModal />
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div className="page-header">
@@ -186,5 +189,6 @@ export default function CharacterSheet() {
         </aside>
       </div>
     </div>
+    </>
   );
 }

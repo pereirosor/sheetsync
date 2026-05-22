@@ -171,6 +171,8 @@ interface AppState {
   diceLog: DiceRollEntry[];
   chatLog: ChatMessage[];
   combatState: CombatState | null;
+  combatRollPending: boolean;
+  combatPendingRolls: Record<string, number | null> | null;
 
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
@@ -193,6 +195,9 @@ interface AppState {
   toggleNPCInScene: (name: string) => void;
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
   sendChatMessage: (text: string) => void;
+  requestCombat: () => void;
+  submitInitiativeRoll: (roll: number) => void;
+  cancelCombatRequest: () => void;
   startCombat: (combatants: CombatantEntry[]) => void;
   nextTurn: () => void;
   endCombat: () => void;
@@ -225,6 +230,8 @@ export const useStore = create<AppState>((set, get) => ({
   diceLog: [],
   chatLog: [],
   combatState: null,
+  combatRollPending: false,
+  combatPendingRolls: null,
   gmNotes: [],
 
   initChannel: (campaignCode: string) => {
@@ -313,7 +320,7 @@ export const useStore = create<AppState>((set, get) => ({
     const ch = get().channel;
     if (ch) void supabase.removeChannel(ch);
     sessionStorage.removeItem(SESSION_KEY);
-    set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null, combatState: null });
+    set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null, combatState: null, combatRollPending: false, combatPendingRolls: null });
   },
 
   updateCharacter: (name: string, updates: Partial<Character>) => {
@@ -466,9 +473,27 @@ export const useStore = create<AppState>((set, get) => ({
         set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
         break;
       }
+      case 'COMBAT_REQUEST': {
+        if (role === 'player') set({ combatRollPending: true });
+        break;
+      }
+      case 'COMBAT_INITIATIVE_ROLL': {
+        if (role === 'gm') {
+          const { characterName, roll } = msg.payload;
+          set((s) => {
+            if (!s.combatPendingRolls) return {};
+            return { combatPendingRolls: { ...s.combatPendingRolls, [characterName]: roll } };
+          });
+        }
+        break;
+      }
+      case 'COMBAT_CANCEL': {
+        set({ combatRollPending: false });
+        break;
+      }
       case 'COMBAT_START': {
         const { combatants } = msg.payload;
-        set({ combatState: { active: true, combatants, currentIndex: 0, round: 1 } });
+        set({ combatState: { active: true, combatants, currentIndex: 0, round: 1 }, combatRollPending: false });
         break;
       }
       case 'COMBAT_NEXT_TURN': {
@@ -679,12 +704,39 @@ export const useStore = create<AppState>((set, get) => ({
     broadcast(channel, { type: 'CHAT_MESSAGE', payload: { campaignCode: campaign.code, senderName, text: trimmed } });
   },
 
+  requestCombat: () => {
+    const { campaign, channel } = get();
+    if (!campaign) return;
+    const playerRolls: Record<string, number | null> = Object.fromEntries(
+      campaign.playerNames.map((n) => [n, null]),
+    );
+    set({ combatPendingRolls: playerRolls });
+    broadcast(channel, { type: 'COMBAT_REQUEST', payload: { campaignCode: campaign.code } });
+  },
+
+  submitInitiativeRoll: (roll: number) => {
+    const { campaign, channel, currentPlayerName } = get();
+    if (!campaign || !currentPlayerName) return;
+    set({ combatRollPending: false });
+    broadcast(channel, {
+      type: 'COMBAT_INITIATIVE_ROLL',
+      payload: { campaignCode: campaign.code, characterName: currentPlayerName, roll },
+    });
+  },
+
+  cancelCombatRequest: () => {
+    const { campaign, channel } = get();
+    if (!campaign) return;
+    set({ combatPendingRolls: null });
+    broadcast(channel, { type: 'COMBAT_CANCEL', payload: { campaignCode: campaign.code } });
+  },
+
   startCombat: (combatants: CombatantEntry[]) => {
     const { campaign, channel } = get();
     if (!campaign) return;
     const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
     const state: CombatState = { active: true, combatants: sorted, currentIndex: 0, round: 1 };
-    set({ combatState: state });
+    set({ combatState: state, combatPendingRolls: null });
     broadcast(channel, { type: 'COMBAT_START', payload: { campaignCode: campaign.code, combatants: sorted } });
   },
 
