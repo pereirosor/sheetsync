@@ -7,6 +7,7 @@ import GMChat from './GMChat';
 import GMNotesTab from './GMNotesTab';
 import CombatTracker from './CombatTracker';
 import CombatInitModal from './CombatInitModal';
+import LevelUpStatusModal from './LevelUpStatusModal';
 
 type GMTab = 'scene' | 'characters' | 'notes';
 type RestType = 'short' | 'long';
@@ -25,6 +26,7 @@ export default function GMPanel() {
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
   const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   if (!campaign) return null;
 
@@ -42,6 +44,7 @@ export default function GMPanel() {
     setConfirmRest(null);
   }
 
+  const hasPendingLevelUp = playerNames.some((n) => characters[n]?.pendingLevelUp);
   const restLabel = confirmRest === 'long' ? 'Descanso Longo' : 'Descanso Curto';
   const sceneDesc =
     playerNames.length > 0 && inSceneNPCNames.length > 0
@@ -159,6 +162,14 @@ export default function GMPanel() {
                 >
                   ☀ Descanso Longo para Todos
                 </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
+                  onClick={() => setShowLevelUp(true)}
+                  title={hasPendingLevelUp ? 'Há jogadores com Level Up pendente' : 'Liberar Level Up para os jogadores'}
+                >
+                  ⬆ Level Up
+                </button>
               </div>
             )}
 
@@ -218,6 +229,7 @@ export default function GMPanel() {
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
       {combatPendingRolls !== null && <CombatInitModal />}
+      {showLevelUp && <LevelUpStatusModal onClose={() => setShowLevelUp(false)} />}
 
       {/* Confirm rest modal */}
       {confirmRest && (

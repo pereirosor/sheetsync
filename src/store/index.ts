@@ -72,6 +72,8 @@ const normalizeCharacter = (ch: Character): Character => ({
   originBenefits: ch.originBenefits ?? [],
   created: ch.created ?? (!!ch.race && !!ch.class && !!ch.origin),
   conditions: ch.conditions ?? [],
+  powers: ch.powers ?? [],
+  pendingLevelUp: ch.pendingLevelUp ?? false,
 });
 
 async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {
@@ -208,6 +210,9 @@ interface AppState {
   updateGMNote: (id: string, patch: Partial<Pick<GMNote, 'title' | 'body'>>) => Promise<void>;
   deleteGMNote: (id: string) => string | null;
   toggleCondition: (characterName: string, condition: string) => void;
+  releaseLevelUp: () => void;
+  resetLevelUp: () => void;
+  applyLevelUp: (name: string, patch: Partial<Character>) => void;
 }
 
 const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
@@ -505,6 +510,25 @@ export const useStore = create<AppState>((set, get) => ({
       }
       case 'COMBAT_END': {
         set({ combatState: null });
+        break;
+      }
+      case 'LEVEL_UP_RELEASED': {
+        if (role !== 'player') break;
+        const { currentPlayerName, characters } = get();
+        if (!currentPlayerName) break;
+        const char = characters[currentPlayerName];
+        if (!char) break;
+        set({ characters: { ...characters, [currentPlayerName]: { ...char, pendingLevelUp: true } } });
+        addToast('O mestre liberou o Level Up! Abra o assistente para subir de nível.', 'success');
+        break;
+      }
+      case 'LEVEL_UP_RESET': {
+        if (role !== 'player') break;
+        const { currentPlayerName, characters } = get();
+        if (!currentPlayerName) break;
+        const char = characters[currentPlayerName];
+        if (!char) break;
+        set({ characters: { ...characters, [currentPlayerName]: { ...char, pendingLevelUp: false } } });
         break;
       }
     }
@@ -813,5 +837,48 @@ export const useStore = create<AppState>((set, get) => ({
       ? current.filter((c) => c !== condition)
       : [...current, condition];
     get().updateCharacter(characterName, { conditions: updated });
+  },
+
+  releaseLevelUp: () => {
+    const { campaign, channel, characters } = get();
+    if (!campaign) return;
+    const playerNames = campaign.playerNames;
+    const newChars = { ...characters };
+    for (const name of playerNames) {
+      const char = newChars[name];
+      if (char && char.owner === 'player') {
+        const updated = { ...char, pendingLevelUp: true };
+        newChars[name] = updated;
+        void saveCharacter(updated);
+      }
+    }
+    set({ characters: newChars });
+    broadcast(channel, { type: 'LEVEL_UP_RELEASED', payload: { campaignCode: campaign.code } });
+    get().addToast('Level Up liberado para todos os jogadores!', 'success');
+  },
+
+  resetLevelUp: () => {
+    const { campaign, channel, characters } = get();
+    if (!campaign) return;
+    const playerNames = campaign.playerNames;
+    const newChars = { ...characters };
+    for (const name of playerNames) {
+      const char = newChars[name];
+      if (char && char.owner === 'player') {
+        const updated = { ...char, pendingLevelUp: false };
+        newChars[name] = updated;
+        void saveCharacter(updated);
+      }
+    }
+    set({ characters: newChars });
+    broadcast(channel, { type: 'LEVEL_UP_RESET', payload: { campaignCode: campaign.code } });
+  },
+
+  applyLevelUp: (name: string, patch: Partial<Character>) => {
+    const { characters } = get();
+    const char = characters[name];
+    if (!char) return;
+    const updated: Character = { ...char, ...patch, pendingLevelUp: false };
+    get().updateCharacter(name, updated);
   },
 }));
