@@ -4,8 +4,10 @@ import type {
   Campaign,
   CampaignSettings,
   Character,
+  ChatMessage,
   DiceRollEntry,
   GMCharacterFormData,
+  GMNote,
   Role,
   SyncMessage,
   ToastItem,
@@ -93,6 +95,28 @@ async function loadAllGMCharacters(campaign: Campaign): Promise<Record<string, C
   );
 }
 
+async function saveGMNote(note: GMNote): Promise<void> {
+  await supabase.from('gm_notes').upsert({
+    id: note.id,
+    campaign_code: note.campaignCode,
+    title: note.title,
+    body: note.body,
+    created_at: note.createdAt,
+  });
+}
+
+async function loadAllGMNotes(campaignCode: string): Promise<GMNote[]> {
+  const { data } = await supabase
+    .from('gm_notes')
+    .select('*')
+    .eq('campaign_code', campaignCode)
+    .order('created_at', { ascending: true });
+  if (!data) return [];
+  return (data as { id: string; campaign_code: string; title: string; body: string; created_at: number }[]).map(
+    (r) => ({ id: r.id, campaignCode: r.campaign_code, title: r.title, body: r.body, createdAt: r.created_at }),
+  );
+}
+
 // ── Default character factory ─────────────────────────────────────────────────
 
 export const createDefaultCharacter = (campaignCode: string, name: string): Character => ({
@@ -143,6 +167,7 @@ interface AppState {
   channel: RealtimeChannel | null;
   toasts: ToastItem[];
   diceLog: DiceRollEntry[];
+  chatLog: ChatMessage[];
 
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
@@ -164,6 +189,12 @@ interface AppState {
   deleteCampaign: () => void;
   toggleNPCInScene: (name: string) => void;
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
+  sendChatMessage: (text: string) => void;
+  gmNotes: GMNote[];
+  loadGMNotes: () => Promise<void>;
+  createGMNote: () => GMNote;
+  updateGMNote: (id: string, patch: Partial<Pick<GMNote, 'title' | 'body'>>) => Promise<void>;
+  deleteGMNote: (id: string) => string | null;
 }
 
 const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
@@ -186,6 +217,8 @@ export const useStore = create<AppState>((set, get) => ({
   channel: null,
   toasts: [],
   diceLog: [],
+  chatLog: [],
+  gmNotes: [],
 
   initChannel: (campaignCode: string) => {
     if (get().channel) return;
@@ -216,6 +249,7 @@ export const useStore = create<AppState>((set, get) => ({
       loadAllGMCharacters(campaign),
     ]);
     set({ characters: { ...playerChars, ...gmChars } });
+    await get().loadGMNotes();
   },
 
   joinCampaign: async (code: string, characterName: string) => {
@@ -419,6 +453,12 @@ export const useStore = create<AppState>((set, get) => ({
         set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
         break;
       }
+      case 'CHAT_MESSAGE': {
+        const { senderName, text } = msg.payload;
+        const entry: ChatMessage = { id: genId(), senderName, text, timestamp: Date.now() };
+        set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
+        break;
+      }
     }
   },
 
@@ -440,6 +480,7 @@ export const useStore = create<AppState>((set, get) => ({
         currentPlayerName: session.characterName ?? null,
         loading: false,
       });
+      if (session.role === 'gm') await get().loadGMNotes();
     } catch {
       sessionStorage.removeItem(SESSION_KEY);
       set({ loading: false });
@@ -604,5 +645,59 @@ export const useStore = create<AppState>((set, get) => ({
       };
       broadcast(channel, msg);
     }
+  },
+
+  sendChatMessage: (text: string) => {
+    const { campaign, channel, currentPlayerName } = get();
+    if (!campaign) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const senderName = currentPlayerName ?? 'Mestre';
+    const entry: ChatMessage = { id: genId(), senderName, text: trimmed, timestamp: Date.now() };
+    set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
+    broadcast(channel, { type: 'CHAT_MESSAGE', payload: { campaignCode: campaign.code, senderName, text: trimmed } });
+  },
+
+  loadGMNotes: async () => {
+    const { campaign } = get();
+    if (!campaign) return;
+    try {
+      const notes = await loadAllGMNotes(campaign.code);
+      set({ gmNotes: notes });
+    } catch {
+      // table may not exist yet; degrade gracefully
+    }
+  },
+
+  createGMNote: (): GMNote => {
+    const { campaign, gmNotes } = get();
+    if (!campaign) throw new Error('no campaign');
+    const note: GMNote = {
+      id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      campaignCode: campaign.code,
+      title: 'Nova nota',
+      body: '',
+      createdAt: Date.now(),
+    };
+    void saveGMNote(note);
+    set({ gmNotes: [...gmNotes, note] });
+    return note;
+  },
+
+  updateGMNote: async (id: string, patch: Partial<Pick<GMNote, 'title' | 'body'>>) => {
+    const notes = get().gmNotes;
+    const note = notes.find((n) => n.id === id);
+    if (!note) return;
+    const updated = { ...note, ...patch };
+    set({ gmNotes: notes.map((n) => (n.id === id ? updated : n)) });
+    await saveGMNote(updated);
+  },
+
+  deleteGMNote: (id: string): string | null => {
+    const { gmNotes } = get();
+    void supabase.from('gm_notes').delete().eq('id', id);
+    const remaining = gmNotes.filter((n) => n.id !== id);
+    set({ gmNotes: remaining });
+    return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
   },
 }));
