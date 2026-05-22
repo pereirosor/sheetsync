@@ -3,14 +3,13 @@ import { useStore } from '../../store';
 import PlayerCard from './PlayerCard';
 import CampaignSettings from './CampaignSettings';
 import GMCharactersTab from './GMCharactersTab';
-import DiceLog from '../ui/DiceLog';
+import GMChat from './GMChat';
 
 type GMTab = 'scene' | 'characters';
 
 export default function GMPanel() {
   const campaign = useStore((s) => s.campaign);
   const characters = useStore((s) => s.characters);
-  const diceLog = useStore((s) => s.diceLog);
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
@@ -22,7 +21,7 @@ export default function GMPanel() {
   const inSceneNPCNames = gmCharacterNames.filter((n) => characters[n]?.inScene);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="gm-root">
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -52,8 +51,10 @@ export default function GMPanel() {
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '16px 16px 20px', maxWidth: 1200, width: '100%', margin: '0 auto', flex: 1 }}>
+      {/* Content + fixed chat */}
+      <div className="gm-layout">
+        <main className="gm-main-area">
+          <div className="gm-main-inner">
         {/* Tab nav */}
         <div className="tab-nav" style={{ marginBottom: 16 }}>
           <button
@@ -133,12 +134,15 @@ export default function GMPanel() {
                 )}
               </div>
             )}
-            <DiceLog entries={diceLog} />
           </>
         )}
 
         {/* Personagens do Mestre */}
         {activeTab === 'characters' && <GMCharactersTab />}
+          </div>
+        </main>
+
+        <GMChat />
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}

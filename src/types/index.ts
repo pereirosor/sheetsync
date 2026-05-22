@@ -114,6 +114,13 @@ export interface DiceRollEntry {
   timestamp: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderName: string;
+  text: string;
+  timestamp: number;
+}
+
 export interface Character {
   id: string;
   campaignCode: string;
@@ -246,7 +253,8 @@ export type SyncMessage =
   | { type: 'GM_VITAL_UPDATE'; payload: { campaignCode: string; characterName: string; field: VitalKey; delta: number } }
   | { type: 'REST_APPLIED'; payload: { campaignCode: string; characterName: string; restType: 'short' | 'long' } }
   | { type: 'CAMPAIGN_SETTINGS_UPDATE'; payload: { campaignCode: string; settings: CampaignSettings } }
-  | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } };
+  | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } }
+  | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } };
 
 export interface ToastItem {
   id: string;

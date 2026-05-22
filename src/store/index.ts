@@ -4,6 +4,7 @@ import type {
   Campaign,
   CampaignSettings,
   Character,
+  ChatMessage,
   DiceRollEntry,
   GMCharacterFormData,
   Role,
@@ -143,6 +144,7 @@ interface AppState {
   channel: RealtimeChannel | null;
   toasts: ToastItem[];
   diceLog: DiceRollEntry[];
+  chatLog: ChatMessage[];
 
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
@@ -164,6 +166,7 @@ interface AppState {
   deleteCampaign: () => void;
   toggleNPCInScene: (name: string) => void;
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
+  sendChatMessage: (text: string) => void;
 }
 
 const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
@@ -186,6 +189,7 @@ export const useStore = create<AppState>((set, get) => ({
   channel: null,
   toasts: [],
   diceLog: [],
+  chatLog: [],
 
   initChannel: (campaignCode: string) => {
     if (get().channel) return;
@@ -419,6 +423,12 @@ export const useStore = create<AppState>((set, get) => ({
         set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
         break;
       }
+      case 'CHAT_MESSAGE': {
+        const { senderName, text } = msg.payload;
+        const entry: ChatMessage = { id: genId(), senderName, text, timestamp: Date.now() };
+        set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
+        break;
+      }
     }
   },
 
@@ -604,5 +614,16 @@ export const useStore = create<AppState>((set, get) => ({
       };
       broadcast(channel, msg);
     }
+  },
+
+  sendChatMessage: (text: string) => {
+    const { campaign, channel, currentPlayerName } = get();
+    if (!campaign) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const senderName = currentPlayerName ?? 'Mestre';
+    const entry: ChatMessage = { id: genId(), senderName, text: trimmed, timestamp: Date.now() };
+    set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
+    broadcast(channel, { type: 'CHAT_MESSAGE', payload: { campaignCode: campaign.code, senderName, text: trimmed } });
   },
 }));

@@ -6,6 +6,45 @@ export interface RollResult {
   breakdown: string;
 }
 
+// Pure dice + modifier roller (no skills/character). Produces breakdown like "[4, 5]+3".
+export function rollSimpleFormula(expr: string): { breakdown: string; total: number } | null {
+  const cleaned = expr.trim().toLowerCase().replace(/\s+/g, '');
+  if (!cleaned) return null;
+
+  const tokens = cleaned.split(/(?=[+-])/);
+  const parts: string[] = [];
+  let total = 0;
+
+  for (const token of tokens) {
+    if (!token) continue;
+
+    const diceMatch = token.match(/^([+-]?)(\d*)d(\d+)$/);
+    if (diceMatch) {
+      const sign = diceMatch[1] === '-' ? -1 : 1;
+      const count = diceMatch[2] ? parseInt(diceMatch[2], 10) : 1;
+      const sides = parseInt(diceMatch[3], 10);
+      if (count < 1 || count > 100 || sides < 1) return null;
+      const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
+      total += sign * rolls.reduce((a, b) => a + b, 0);
+      const prefix = sign < 0 ? '-' : parts.length > 0 ? '+' : '';
+      parts.push(`${prefix}[${rolls.join(', ')}]`);
+      continue;
+    }
+
+    const numMatch = token.match(/^([+-]?\d+)$/);
+    if (numMatch) {
+      const n = parseInt(numMatch[1], 10);
+      total += n;
+      parts.push(`${n >= 0 && parts.length > 0 ? '+' : ''}${n}`);
+      continue;
+    }
+
+    return null;
+  }
+
+  return parts.length > 0 ? { breakdown: parts.join(''), total } : null;
+}
+
 export function evalDiceExpr(expr: string, char: Character): RollResult {
   const tokens = expr.split('+').map((t) => t.trim()).filter(Boolean);
   let total = 0;
