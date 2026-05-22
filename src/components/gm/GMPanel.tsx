@@ -4,8 +4,9 @@ import PlayerCard from './PlayerCard';
 import CampaignSettings from './CampaignSettings';
 import GMCharactersTab from './GMCharactersTab';
 import GMChat from './GMChat';
+import GMNotesTab from './GMNotesTab';
 
-type GMTab = 'scene' | 'characters';
+type GMTab = 'scene' | 'characters' | 'notes';
 
 export default function GMPanel() {
   const campaign = useStore((s) => s.campaign);
@@ -89,6 +90,12 @@ export default function GMPanel() {
               </span>
             )}
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'notes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('notes')}
+          >
+            Notas
+          </button>
         </div>
 
         {/* Cena Atual */}
@@ -139,6 +146,9 @@ export default function GMPanel() {
 
         {/* Personagens do Mestre */}
         {activeTab === 'characters' && <GMCharactersTab />}
+
+        {/* Notas */}
+        {activeTab === 'notes' && <GMNotesTab />}
           </div>
         </main>
 

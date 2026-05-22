@@ -256,6 +256,14 @@ export type SyncMessage =
   | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } }
   | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } };
 
+export interface GMNote {
+  id: string;
+  campaignCode: string;
+  title: string;
+  body: string;
+  createdAt: number;
+}
+
 export interface ToastItem {
   id: string;
   message: string;
