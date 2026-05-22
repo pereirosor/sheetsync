@@ -558,3 +558,142 @@ input.num-sm {
   font-size: 14px;
   cursor: not-allowed;
 }
+
+/* ──────────────────────────────────────────
+   PAINEL DO MESTRE — LAYOUT COM CHAT FIXO
+   ────────────────────────────────────────── */
+
+.gm-root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.gm-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gm-main-area {
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.gm-main-inner {
+  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Coluna do chat ── */
+.gm-chat {
+  border-left: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gm-chat-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.gm-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gm-chat-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.gm-chat-time {
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.gm-chat-sender {
+  color: var(--gold);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.gm-chat-input {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.gm-chat-input input { flex: 1; }
+
+.gm-chat-roller {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  flex-shrink: 0;
+}
+
+/* ── Alternador público/privado ── */
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-card);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--t);
+}
+.mode-btn:hover { color: var(--text); border-color: var(--border-light); }
+.mode-btn.active {
+  background: var(--bg-card2);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── Responsivo ── */
+@media (max-width: 960px) {
+  .gm-root {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .gm-layout {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .gm-main-area { overflow-y: visible; }
+  .gm-chat {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 60vh;
+  }
+}
