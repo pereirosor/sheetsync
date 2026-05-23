@@ -307,8 +307,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   signUp: async (email, password) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return error ? error.message : null;
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
+    if (data.session?.user) {
+      const user: AuthUser = { id: data.session.user.id, email: data.session.user.email ?? '' };
+      set({ user });
+      void get().loadMyCampaigns();
+    }
+    return null;
   },
 
   signOut: async () => {
