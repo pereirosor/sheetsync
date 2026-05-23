@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
+  AuthUser,
   Campaign,
   CampaignSettings,
+  CampaignSummary,
   Character,
   ChatMessage,
   CombatantEntry,
@@ -18,8 +20,6 @@ import type {
 import tormenta20 from '../systems/tormenta20';
 import { supabase } from '../lib/supabase';
 
-const SESSION_KEY = 'sheetsync_session';
-
 const generateCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -34,10 +34,10 @@ const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
 async function saveCampaign(c: Campaign): Promise<void> {
   await supabase.from('campaigns').upsert({
     code: c.code,
+    owner_id: c.ownerId,
     created_at: c.createdAt,
     settings: c.settings,
-    player_names: c.playerNames,
-    gm_character_names: c.gmCharacterNames,
+    // player_names and gm_character_names are managed by DB trigger
   });
 }
 
@@ -51,6 +51,7 @@ async function loadCampaign(code: string): Promise<Campaign | null> {
   if (!data) return null;
   return {
     code: data.code as string,
+    ownerId: data.owner_id as string,
     createdAt: data.created_at as number,
     settings: data.settings as CampaignSettings,
     playerNames: (data.player_names as string[]) ?? [],
@@ -60,13 +61,14 @@ async function loadCampaign(code: string): Promise<Campaign | null> {
 
 async function saveCharacter(ch: Character): Promise<void> {
   await supabase.from('characters').upsert(
-    { campaign_code: ch.campaignCode, name: ch.name, owner: ch.owner, data: ch },
+    { campaign_code: ch.campaignCode, user_id: ch.userId, name: ch.name, owner: ch.owner, data: ch },
     { onConflict: 'campaign_code,name' },
   );
 }
 
 const normalizeCharacter = (ch: Character): Character => ({
   ...ch,
+  userId: ch.userId ?? '',
   owner: ch.owner ?? 'player',
   inScene: ch.inScene ?? false,
   originBenefits: ch.originBenefits ?? [],
@@ -124,8 +126,9 @@ async function loadAllGMNotes(campaignCode: string): Promise<GMNote[]> {
 
 // ── Default character factory ─────────────────────────────────────────────────
 
-export const createDefaultCharacter = (campaignCode: string, name: string): Character => ({
+export const createDefaultCharacter = (campaignCode: string, name: string, userId: string): Character => ({
   id: `${campaignCode}_${name}`,
+  userId,
   campaignCode,
   name,
   race: '',
@@ -163,52 +166,83 @@ export const createDefaultCharacter = (campaignCode: string, name: string): Char
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 interface AppState {
+  // Auth
+  user: AuthUser | null;
+  authLoading: boolean;
+  myCampaigns: CampaignSummary[];
+
+  // Campaign session
   role: Role | null;
-  loading: boolean;
   pendingGMCode: string | null;
   campaign: Campaign | null;
   currentPlayerName: string | null;
   characters: Record<string, Character>;
   channel: RealtimeChannel | null;
+
+  // UI ephemeral
   toasts: ToastItem[];
   diceLog: DiceRollEntry[];
   chatLog: ChatMessage[];
   combatState: CombatState | null;
   combatRollPending: boolean;
   combatPendingRolls: Record<string, number | null> | null;
+  gmNotes: GMNote[];
 
+  // Auth actions
+  initAuth: () => void;
+  signIn: (email: string, password: string) => Promise<string | null>;
+  signUp: (email: string, password: string) => Promise<string | null>;
+  signOut: () => Promise<void>;
+
+  // Dashboard
+  loadMyCampaigns: () => Promise<void>;
+
+  // Campaign lifecycle
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
   confirmGMEntry: () => Promise<void>;
+  openCampaign: (code: string) => Promise<void>;
   joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | string>;
   leaveCampaign: () => void;
+
+  // Character mutations
   updateCharacter: (name: string, updates: Partial<Character>) => void;
   updateVital: (characterName: string, field: VitalKey, delta: number) => void;
   setVitalMax: (characterName: string, field: VitalKey, max: number) => void;
   applyRest: (characterName: string, restType: 'short' | 'long') => void;
   updateSettings: (settings: Partial<CampaignSettings>) => void;
   handleSyncMessage: (msg: SyncMessage) => void;
-  restoreSession: () => Promise<void>;
+
+  // Toast
   addToast: (message: string, type: ToastItem['type']) => void;
   removeToast: (id: string) => void;
+
+  // GM characters
   createGMCharacter: (data: GMCharacterFormData) => void;
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
   deleteCampaign: () => void;
   toggleNPCInScene: (name: string) => void;
+
+  // Dice / chat
   rollDice: (entry: Omit<DiceRollEntry, 'id' | 'timestamp'>) => void;
   sendChatMessage: (text: string) => void;
+
+  // Combat
   requestCombat: () => void;
   submitInitiativeRoll: (roll: number) => void;
   cancelCombatRequest: () => void;
   startCombat: (combatants: CombatantEntry[]) => void;
   nextTurn: () => void;
   endCombat: () => void;
-  gmNotes: GMNote[];
+
+  // GM notes
   loadGMNotes: () => Promise<void>;
   createGMNote: () => GMNote;
   updateGMNote: (id: string, patch: Partial<Pick<GMNote, 'title' | 'body'>>) => Promise<void>;
   deleteGMNote: (id: string) => string | null;
+
+  // Conditions / level-up
   toggleCondition: (characterName: string, condition: string) => void;
   releaseLevelUp: () => void;
   resetLevelUp: () => void;
@@ -226,8 +260,10 @@ const broadcast = (channel: RealtimeChannel | null, msg: SyncMessage) => {
 };
 
 export const useStore = create<AppState>((set, get) => ({
+  user: null,
+  authLoading: true,
+  myCampaigns: [],
   role: null,
-  loading: true,
   pendingGMCode: null,
   campaign: null,
   currentPlayerName: null,
@@ -241,6 +277,88 @@ export const useStore = create<AppState>((set, get) => ({
   combatPendingRolls: null,
   gmNotes: [],
 
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  initAuth: () => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const user: AuthUser = { id: session.user.id, email: session.user.email ?? '' };
+        set({ user, authLoading: false });
+        void get().loadMyCampaigns();
+      } else {
+        set({ user: null, authLoading: false });
+      }
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const user: AuthUser = { id: session.user.id, email: session.user.email ?? '' };
+        set({ user });
+        void get().loadMyCampaigns();
+      } else {
+        set({ user: null, myCampaigns: [] });
+      }
+    });
+  },
+
+  signIn: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error ? error.message : null;
+  },
+
+  signUp: async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
+    if (data.session?.user) {
+      const user: AuthUser = { id: data.session.user.id, email: data.session.user.email ?? '' };
+      set({ user });
+      void get().loadMyCampaigns();
+    }
+    return null;
+  },
+
+  signOut: async () => {
+    await supabase.auth.signOut();
+    const ch = get().channel;
+    if (ch) void supabase.removeChannel(ch);
+    set({
+      user: null,
+      myCampaigns: [],
+      role: null,
+      pendingGMCode: null,
+      campaign: null,
+      currentPlayerName: null,
+      characters: {},
+      channel: null,
+      combatState: null,
+      combatRollPending: false,
+      combatPendingRolls: null,
+      gmNotes: [],
+      diceLog: [],
+      chatLog: [],
+    });
+  },
+
+  // ── Dashboard ────────────────────────────────────────────────────────────
+
+  loadMyCampaigns: async () => {
+    const { data } = await supabase
+      .from('campaign_members')
+      .select('role, campaigns(code, created_at)');
+    if (!data) { set({ myCampaigns: [] }); return; }
+    const summaries: CampaignSummary[] = (data as { role: string; campaigns: unknown }[])
+      .map((r) => {
+        const camp = r.campaigns as { code: string; created_at: number } | null;
+        if (!camp) return null;
+        return { code: camp.code, role: r.role as Role, createdAt: camp.created_at };
+      })
+      .filter((s): s is CampaignSummary => s !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    set({ myCampaigns: summaries });
+  },
+
+  // ── Campaign lifecycle ────────────────────────────────────────────────────
+
   initChannel: (campaignCode: string) => {
     if (get().channel) return;
     const ch = buildChannel(campaignCode, (msg) => get().handleSyncMessage(msg)).subscribe();
@@ -248,51 +366,51 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   createCampaign: async () => {
+    const { user } = get();
+    if (!user) return;
     const code = generateCode();
     const campaign: Campaign = {
       code,
+      ownerId: user.id,
       createdAt: Date.now(),
       settings: { sanityEnabled: false, speedUnit: 'squares' },
       playerNames: [],
       gmCharacterNames: [],
     };
     await saveCampaign(campaign);
+    await supabase.from('campaign_members').insert({ campaign_code: code, user_id: user.id, role: 'gm' });
     set({ campaign, pendingGMCode: code, characters: {} });
+    await get().loadMyCampaigns();
   },
 
   confirmGMEntry: async () => {
-    const { pendingGMCode, campaign } = get();
-    if (!pendingGMCode || !campaign) return;
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ role: 'gm', campaignCode: pendingGMCode }));
-    set({ role: 'gm', pendingGMCode: null });
-    const [playerChars, gmChars] = await Promise.all([
-      loadAllCharacters(campaign),
-      loadAllGMCharacters(campaign),
-    ]);
-    set({ characters: { ...playerChars, ...gmChars } });
-    await get().loadGMNotes();
+    const { pendingGMCode } = get();
+    if (!pendingGMCode) return;
+    await get().openCampaign(pendingGMCode);
+    set({ pendingGMCode: null });
   },
 
-  joinCampaign: async (code: string, characterName: string) => {
-    try {
-    const campaign = await loadCampaign(code);
-    if (!campaign) return 'not_found';
+  openCampaign: async (code: string) => {
+    const { user, myCampaigns } = get();
+    if (!user) return;
 
-    let character = null;
-    const { data: existing } = await supabase
-      .from('characters')
-      .select('data')
-      .eq('campaign_code', code)
-      .eq('name', characterName)
-      .single();
-    if (existing) return 'name_taken';
-    character = createDefaultCharacter(code, characterName);
-
-    if (!campaign.playerNames.includes(characterName)) {
-      campaign.playerNames = [...campaign.playerNames, characterName];
-      await saveCampaign(campaign);
+    // Determine role (from cached list or query DB as fallback)
+    let myRole: Role = 'player';
+    const summary = myCampaigns.find((c) => c.code === code);
+    if (summary) {
+      myRole = summary.role;
+    } else {
+      const { data } = await supabase
+        .from('campaign_members')
+        .select('role')
+        .eq('campaign_code', code)
+        .eq('user_id', user.id)
+        .single();
+      if (data) myRole = data.role as Role;
     }
-    await saveCharacter(character);
+
+    const campaign = await loadCampaign(code);
+    if (!campaign) return;
 
     const [playerChars, gmChars] = await Promise.all([
       loadAllCharacters(campaign),
@@ -300,24 +418,57 @@ export const useStore = create<AppState>((set, get) => ({
     ]);
     const characters = { ...playerChars, ...gmChars };
 
-    sessionStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify({ role: 'player', campaignCode: code, characterName }),
-    );
+    let currentPlayerName: string | null = null;
+    if (myRole === 'player') {
+      const myChar = Object.values(characters).find(
+        (c) => c.userId === user.id && c.owner === 'player',
+      );
+      currentPlayerName = myChar?.name ?? null;
+    }
 
-    const joinedCharacter = character;
-    const ch = buildChannel(code, (msg) => get().handleSyncMessage(msg)).subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        const msg: SyncMessage = {
-          type: 'PLAYER_JOIN',
-          payload: { campaignCode: code, character: joinedCharacter },
-        };
-        void ch.send({ type: 'broadcast', event: 'sync', payload: msg });
+    set({ role: myRole, campaign, characters, currentPlayerName });
+    if (myRole === 'gm') await get().loadGMNotes();
+    get().initChannel(code);
+  },
+
+  joinCampaign: async (code: string, characterName: string) => {
+    const { user } = get();
+    if (!user) return 'not_found';
+    try {
+      // 1. Join as member via RPC (SECURITY DEFINER — bypasses RLS)
+      const { data: joined } = await supabase.rpc('join_campaign', { p_code: code });
+      if (!joined) return 'not_found';
+
+      // 2. If already has a character, just open
+      const { data: myChar } = await supabase
+        .from('characters')
+        .select('name')
+        .eq('campaign_code', code)
+        .eq('user_id', user.id)
+        .eq('owner', 'player')
+        .maybeSingle();
+      if (myChar) {
+        await get().loadMyCampaigns();
+        await get().openCampaign(code);
+        return 'ok';
       }
-    });
 
-    set({ campaign, role: 'player', currentPlayerName: characterName, characters, channel: ch });
-    return 'ok';
+      // 3. Check name uniqueness
+      const { data: existing } = await supabase
+        .from('characters')
+        .select('name')
+        .eq('campaign_code', code)
+        .eq('name', characterName)
+        .maybeSingle();
+      if (existing) return 'name_taken';
+
+      // 4. Create and save character
+      const character = createDefaultCharacter(code, characterName, user.id);
+      await saveCharacter(character);
+
+      await get().loadMyCampaigns();
+      await get().openCampaign(code);
+      return 'ok';
     } catch (e) {
       return e instanceof Error ? e.message : 'unknown error';
     }
@@ -326,9 +477,22 @@ export const useStore = create<AppState>((set, get) => ({
   leaveCampaign: () => {
     const ch = get().channel;
     if (ch) void supabase.removeChannel(ch);
-    sessionStorage.removeItem(SESSION_KEY);
-    set({ role: null, campaign: null, currentPlayerName: null, characters: {}, channel: null, combatState: null, combatRollPending: false, combatPendingRolls: null });
+    set({
+      role: null,
+      campaign: null,
+      currentPlayerName: null,
+      characters: {},
+      channel: null,
+      combatState: null,
+      combatRollPending: false,
+      combatPendingRolls: null,
+      gmNotes: [],
+    });
+    // Load updated campaign list for dashboard
+    void get().loadMyCampaigns();
   },
+
+  // ── Character mutations ───────────────────────────────────────────────────
 
   updateCharacter: (name: string, updates: Partial<Character>) => {
     const { characters, campaign, channel } = get();
@@ -412,13 +576,13 @@ export const useStore = create<AppState>((set, get) => ({
       case 'PLAYER_JOIN': {
         const char = msg.payload.character;
         if (characters[char.name]?.owner === 'gm') break;
+        // Update in-memory campaign.playerNames for live UX (DB handled by trigger)
         const updatedCampaign: Campaign = {
           ...campaign,
           playerNames: campaign.playerNames.includes(char.name)
             ? campaign.playerNames
             : [...campaign.playerNames, char.name],
         };
-        void saveCampaign(updatedCampaign);
         set({ campaign: updatedCampaign, characters: { ...characters, [char.name]: char } });
         if (role === 'gm') addToast(`${char.name} entrou na campanha!`, 'info');
         break;
@@ -534,34 +698,23 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  restoreSession: async () => {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) { set({ loading: false }); return; }
-      const session = JSON.parse(raw) as { role: Role; campaignCode: string; characterName?: string };
-      const campaign = await loadCampaign(session.campaignCode);
-      if (!campaign) { sessionStorage.removeItem(SESSION_KEY); set({ loading: false }); return; }
-      const [playerChars, gmChars] = await Promise.all([
-        loadAllCharacters(campaign),
-        loadAllGMCharacters(campaign),
-      ]);
-      set({
-        role: session.role,
-        campaign,
-        characters: { ...playerChars, ...gmChars },
-        currentPlayerName: session.characterName ?? null,
-        loading: false,
-      });
-      if (session.role === 'gm') await get().loadGMNotes();
-    } catch {
-      sessionStorage.removeItem(SESSION_KEY);
-      set({ loading: false });
-    }
+  // ── Toast ─────────────────────────────────────────────────────────────────
+
+  addToast: (message: string, type: ToastItem['type']) => {
+    const id = genId();
+    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }));
+    setTimeout(() => get().removeToast(id), 4500);
   },
 
+  removeToast: (id: string) => {
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
+
+  // ── GM characters ─────────────────────────────────────────────────────────
+
   createGMCharacter: (data: GMCharacterFormData) => {
-    const { campaign, characters } = get();
-    if (!campaign) return;
+    const { campaign, characters, user } = get();
+    if (!campaign || !user) return;
     const allNames = [...campaign.playerNames, ...(campaign.gmCharacterNames ?? [])];
     if (allNames.includes(data.name)) {
       get().addToast(`Já existe um personagem com o nome "${data.name}".`, 'warning');
@@ -569,6 +722,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
     const ch: Character = {
       id: `${campaign.code}_gm_${data.name}`,
+      userId: user.id,
       campaignCode: campaign.code,
       name: data.name,
       race: data.race,
@@ -604,11 +758,11 @@ export const useStore = create<AppState>((set, get) => ({
       inScene: false,
       created: true,
     };
+    // Trigger will update gm_character_names in DB; update in-memory for live UX
     const updatedCampaign: Campaign = {
       ...campaign,
       gmCharacterNames: [...(campaign.gmCharacterNames ?? []), data.name],
     };
-    void saveCampaign(updatedCampaign);
     void saveCharacter(ch);
     set({ campaign: updatedCampaign, characters: { ...characters, [data.name]: ch } });
   },
@@ -654,9 +808,9 @@ export const useStore = create<AppState>((set, get) => ({
       actions: data.actions,
       items: data.items,
     };
+    // Trigger handles gm_character_names in DB; update in-memory
     const gmNames = (campaign.gmCharacterNames ?? []).map((n) => (n === originalName ? data.name : n));
     const updatedCampaign = { ...campaign, gmCharacterNames: gmNames };
-    void saveCampaign(updatedCampaign);
     void saveCharacter(updated);
     const newChars = { ...characters };
     if (data.name !== originalName) delete newChars[originalName];
@@ -668,11 +822,11 @@ export const useStore = create<AppState>((set, get) => ({
     const { campaign, characters } = get();
     if (!campaign) return;
     void supabase.from('characters').delete().eq('campaign_code', campaign.code).eq('name', name);
+    // Trigger handles gm_character_names in DB; update in-memory
     const updatedCampaign: Campaign = {
       ...campaign,
       gmCharacterNames: (campaign.gmCharacterNames ?? []).filter((n) => n !== name),
     };
-    void saveCampaign(updatedCampaign);
     const newChars = { ...characters };
     delete newChars[name];
     set({ campaign: updatedCampaign, characters: newChars });
@@ -694,15 +848,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ characters: { ...characters, [name]: updated } });
   },
 
-  addToast: (message: string, type: ToastItem['type']) => {
-    const id = genId();
-    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }));
-    setTimeout(() => get().removeToast(id), 4500);
-  },
-
-  removeToast: (id: string) => {
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-  },
+  // ── Dice / chat ───────────────────────────────────────────────────────────
 
   rollDice: (entry) => {
     const { campaign, channel, addToast } = get();
@@ -729,6 +875,8 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({ chatLog: [...s.chatLog, entry].slice(-100) }));
     broadcast(channel, { type: 'CHAT_MESSAGE', payload: { campaignCode: campaign.code, senderName, text: trimmed } });
   },
+
+  // ── Combat ────────────────────────────────────────────────────────────────
 
   requestCombat: () => {
     const { campaign, channel } = get();
@@ -785,6 +933,8 @@ export const useStore = create<AppState>((set, get) => ({
     broadcast(channel, { type: 'COMBAT_END', payload: { campaignCode: campaign.code } });
   },
 
+  // ── GM notes ─────────────────────────────────────────────────────────────
+
   loadGMNotes: async () => {
     const { campaign } = get();
     if (!campaign) return;
@@ -827,6 +977,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ gmNotes: remaining });
     return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
   },
+
+  // ── Conditions / level-up ─────────────────────────────────────────────────
 
   toggleCondition: (characterName: string, condition: string) => {
     const { characters } = get();

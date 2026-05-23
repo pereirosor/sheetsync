@@ -472,7 +472,6 @@ const tormenta20: GameSystem = {
   },
   classPaths: {
     'Arcanista': ['Mago', 'Ilusionista', 'Necromante', 'Conjurador', 'Elementalista', 'Bruxo'],
-    'Bardo': ['Bardo das Artes', 'Cabotino', 'Diplomata'],
   },
   classProficiencies: {
     'Arcanista':  { martialWeapons: false, heavyArmor: false, shields: false },
