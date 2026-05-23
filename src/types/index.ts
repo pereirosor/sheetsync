@@ -123,6 +123,7 @@ export interface ChatMessage {
 
 export interface Character {
   id: string;
+  userId: string;
   campaignCode: string;
   name: string;
   race: string;
@@ -165,6 +166,7 @@ export interface CampaignSettings {
 
 export interface Campaign {
   code: string;
+  ownerId: string;
   createdAt: number;
   settings: CampaignSettings;
   playerNames: string[];
@@ -323,3 +325,14 @@ export interface ToastItem {
 }
 
 export type Role = 'gm' | 'player';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+export interface CampaignSummary {
+  code: string;
+  role: Role;
+  createdAt: number;
+}

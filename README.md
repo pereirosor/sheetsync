@@ -56,38 +56,24 @@ cd sheetsync
 npm install
 ```
 
-### 2. Criar tabelas no Supabase
+### 2. Configurar autenticação no Supabase
 
-Execute no **SQL Editor** do seu projeto Supabase:
+No painel do Supabase: **Authentication → Providers → Email** — deixe habilitado e **desligue "Confirm email"** para que o cadastro leve direto ao login sem depender de entrega de e-mail.
+
+### 3. Criar tabelas no Supabase
+
+Execute o conteúdo de **`supabase/schema.sql`** no **SQL Editor** do seu projeto. O arquivo cria as tabelas, habilita RLS com políticas completas, funções auxiliares (SECURITY DEFINER) e um trigger que mantém os arrays de nomes de personagens em sincronia.
+
+Resumo do schema:
 
 ```sql
-create table campaigns (
-  code              text primary key,
-  created_at        bigint not null,
-  settings          jsonb  not null default '{}',
-  player_names      text[] not null default '{}',
-  gm_character_names text[] not null default '{}'
-);
-
-create table characters (
-  id             uuid primary key default gen_random_uuid(),
-  campaign_code  text not null references campaigns(code) on delete cascade,
-  name           text not null,
-  owner          text not null,
-  data           jsonb not null,
-  unique (campaign_code, name)
-);
-
-create table gm_notes (
-  id             uuid primary key default gen_random_uuid(),
-  campaign_code  text not null references campaigns(code) on delete cascade,
-  title          text not null default '',
-  body           text not null default '',
-  created_at     bigint not null
-);
+campaigns        -- code (PK), owner_id (GM), settings
+campaign_members -- (campaign_code, user_id) — quem pode acessar a campanha
+characters       -- campaign_code, user_id, name, owner ('player'|'gm'), data JSONB
+gm_notes         -- id, campaign_code, title, body
 ```
 
-### 3. Variáveis de ambiente
+### 4. Variáveis de ambiente
 
 Crie `.env.local` na raiz do projeto:
 
@@ -98,7 +84,7 @@ VITE_SUPABASE_ANON_KEY=<sua-anon-key-publica>
 
 > Use a **anon key** (pública), não a `service_role`. Encontre em *Project Settings → API*.
 
-### 4. Rodar em desenvolvimento
+### 5. Rodar em desenvolvimento
 
 ```bash
 npm run dev
