@@ -51,7 +51,7 @@ export default function CharacterSheet() {
     {showLevelUp && (
       <LevelUpWizard characterName={currentPlayerName} onClose={() => setShowLevelUp(false)} />
     )}
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="sheet-root">
       {/* Header */}
       <div className="page-header">
         <div>
