@@ -75,8 +75,7 @@ function isStepValid(step: StepId, state: WizardState): boolean {
       });
     }
     case 'equipment': {
-      const noArmor = state.charClass === 'Arcanista';
-      return !!state.weaponSimple && (noArmor || !!state.armorPick);
+      return !!state.weaponSimple && !!state.armorPick;
     }
     case 'spells': {
       const max = tormenta20.classStartingSpells[state.charClass] ?? 0;
@@ -132,7 +131,7 @@ function getMissingItems(step: StepId, state: WizardState): string[] {
     }
     case 'equipment': {
       if (!state.weaponSimple) items.push('Escolha uma arma simples');
-      if (state.charClass !== 'Arcanista' && !state.armorPick) items.push('Escolha uma armadura');
+      if (!state.armorPick) items.push('Escolha uma armadura');
       break;
     }
     case 'spells': {

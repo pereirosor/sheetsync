@@ -30,6 +30,7 @@ export default function SpellsTab({ characterName }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
+  const addToast = useStore((s) => s.addToast);
   const [searchVal, setSearchVal] = useState('');
   const [expandedAmps, setExpandedAmps] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<SpellItem | null>(null);
@@ -81,6 +82,11 @@ export default function SpellsTab({ characterName }: Props) {
           value={searchVal}
           onChange={setSearchVal}
           onSelect={(opt) => {
+            if (char.spells.some((s) => s.name === opt.name)) {
+              addToast(`Você já conhece a magia "${opt.name}".`, 'warning');
+              setSearchVal('');
+              return;
+            }
             setSpells([...char.spells, {
               id: genId(), name: opt.name,
               circleOrLevel: `${opt.circle}º círculo`,
@@ -89,6 +95,7 @@ export default function SpellsTab({ characterName }: Props) {
               duration: opt.duration, description: opt.description,
               amplifications: opt.amplifications,
             }]);
+            setSearchVal('');
           }}
           options={spellOptions}
           getLabel={(o) => o.name}

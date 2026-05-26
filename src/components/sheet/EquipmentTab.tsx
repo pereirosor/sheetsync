@@ -71,7 +71,9 @@ export default function EquipmentTab({ characterName }: Props) {
   const setItems = (equipment: EquipmentItem[]) => updateCharacter(characterName, { equipment });
   const addItem = () => setItems([...char.equipment, emptyItem()]);
   const requestRemove = (item: EquipmentItem) => {
-    if (item.type === 'weapon' || item.type === 'armor') {
+    if ((item.quantity ?? 1) > 1) {
+      setItems(char.equipment.map((i) => i.id === item.id ? { ...i, quantity: (i.quantity ?? 1) - 1 } : i));
+    } else if (item.type === 'weapon' || item.type === 'armor') {
       setPendingDelete(item);
     } else {
       setItems(char.equipment.filter((i) => i.id !== item.id));
@@ -89,7 +91,7 @@ export default function EquipmentTab({ characterName }: Props) {
     rollDice({ rollerName: char.name || characterName, label: item.name || 'Item', diceExpr: item.diceExpr, breakdown, total });
   };
 
-  const totalWeight = char.equipment.reduce((s, i) => s + i.weight, 0);
+  const totalWeight = char.equipment.reduce((s, i) => s + i.weight * (i.quantity ?? 1), 0);
   const maxWeight = char.attributes.strength * 5;
   const overWeight = totalWeight > maxWeight;
 
@@ -120,7 +122,15 @@ export default function EquipmentTab({ characterName }: Props) {
         <AutocompleteInput<EquipOption>
           value={searchVal}
           onChange={setSearchVal}
-          onSelect={(opt) => { setItems([...char.equipment, optToItem(opt)]); }}
+          onSelect={(opt) => {
+            const existing = char.equipment.find((i) => i.name === opt.name && i.type === (opt.kind === 'weapon' ? 'weapon' : opt.kind === 'armor' ? 'armor' : 'item'));
+            if (existing) {
+              setItems(char.equipment.map((i) => i.id === existing.id ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i));
+            } else {
+              setItems([...char.equipment, optToItem(opt)]);
+            }
+            setSearchVal('');
+          }}
           options={allOptions}
           getLabel={(o) => o.name}
           getSublabel={(o) =>
@@ -153,9 +163,14 @@ export default function EquipmentTab({ characterName }: Props) {
             <tbody>
               {char.equipment.map((item) => (
                 <tr key={item.id}>
-                  <td>
+                  <td style={{ position: 'relative' }}>
                     <input value={item.name} placeholder="Nome do item"
                       onChange={(e) => updateItem(item.id, 'name', e.target.value)} />
+                    {(item.quantity ?? 1) > 1 && (
+                      <span style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--gold)', fontWeight: 700, pointerEvents: 'none' }}>
+                        x{item.quantity}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <select value={item.type} onChange={(e) => updateItem(item.id, 'type', e.target.value)}>

@@ -48,6 +48,7 @@ export interface WeaponRef {
   weight: number;
   category: 'simples' | 'marcial' | 'exótica' | 'fogo';
   properties?: string;
+  price: number;
 }
 
 export interface ArmorRef {
@@ -55,11 +56,13 @@ export interface ArmorRef {
   penalty: string;
   weight: number;
   type: 'leve' | 'pesada' | 'escudo';
+  price: number;
 }
 
 export interface GeneralItemRef {
   weight: number;
   description?: string;
+  price: number;
 }
 
 export interface SpellRef {
@@ -89,6 +92,7 @@ export interface EquipmentItem {
   damageType?: string;
   critical?: string;
   properties?: string;
+  quantity?: number;
 }
 
 export interface SpellItem {
