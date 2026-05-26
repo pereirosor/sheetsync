@@ -4,16 +4,20 @@ import type { Character } from '../types';
 export interface RollResult {
   total: number;
   breakdown: string;
+  diceSum: number;
+  diceMax: number;
 }
 
 // Pure dice + modifier roller (no skills/character). Produces breakdown like "[4, 5]+3".
-export function rollSimpleFormula(expr: string): { breakdown: string; total: number } | null {
+export function rollSimpleFormula(expr: string): { breakdown: string; total: number; diceSum: number; diceMax: number } | null {
   const cleaned = expr.trim().toLowerCase().replace(/\s+/g, '');
   if (!cleaned) return null;
 
   const tokens = cleaned.split(/(?=[+-])/);
   const parts: string[] = [];
   let total = 0;
+  let diceSum = 0;
+  let diceMax = 0;
 
   for (const token of tokens) {
     if (!token) continue;
@@ -25,7 +29,10 @@ export function rollSimpleFormula(expr: string): { breakdown: string; total: num
       const sides = parseInt(diceMatch[3], 10);
       if (count < 1 || count > 100 || sides < 1) return null;
       const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
-      total += sign * rolls.reduce((a, b) => a + b, 0);
+      const rollsSum = rolls.reduce((a, b) => a + b, 0);
+      total += sign * rollsSum;
+      diceSum += rollsSum;
+      diceMax += count * sides;
       const prefix = sign < 0 ? '-' : parts.length > 0 ? '+' : '';
       parts.push(`${prefix}[${rolls.join(', ')}]`);
       continue;
@@ -42,12 +49,14 @@ export function rollSimpleFormula(expr: string): { breakdown: string; total: num
     return null;
   }
 
-  return parts.length > 0 ? { breakdown: parts.join(''), total } : null;
+  return parts.length > 0 ? { breakdown: parts.join(''), total, diceSum, diceMax } : null;
 }
 
 export function evalDiceExpr(expr: string, char: Character): RollResult {
   const tokens = expr.split('+').map((t) => t.trim()).filter(Boolean);
   let total = 0;
+  let diceSum = 0;
+  let diceMax = 0;
   const parts: string[] = [];
 
   for (const token of tokens) {
@@ -59,6 +68,8 @@ export function evalDiceExpr(expr: string, char: Character): RollResult {
       for (let i = 0; i < n; i++) rolls.push(Math.floor(Math.random() * m) + 1);
       const sum = rolls.reduce((a, b) => a + b, 0);
       total += sum;
+      diceSum += sum;
+      diceMax += n * m;
       parts.push(n === 1 ? `d${m}[${rolls[0]}]` : `${token}[${rolls.join(',')}]`);
       continue;
     }
@@ -87,5 +98,5 @@ export function evalDiceExpr(expr: string, char: Character): RollResult {
     parts.push(`?${token}`);
   }
 
-  return { total, breakdown: parts.join('+') };
+  return { total, breakdown: parts.join('+'), diceSum, diceMax };
 }

@@ -54,8 +54,8 @@ export default function SpellsTab({ characterName }: Props) {
 
   const handleRoll = (spell: SpellItem) => {
     if (!spell.diceExpr?.trim()) return;
-    const { total, breakdown } = evalDiceExpr(spell.diceExpr, char);
-    rollDice({ rollerName: char.name || characterName, label: spell.name || 'Magia', diceExpr: spell.diceExpr, breakdown, total });
+    const { total, breakdown, diceSum, diceMax } = evalDiceExpr(spell.diceExpr, char);
+    rollDice({ rollerName: char.name || characterName, label: spell.name || 'Magia', diceExpr: spell.diceExpr, breakdown, total, diceSum, diceMax });
   };
 
   const toggleAmp = (id: string) =>

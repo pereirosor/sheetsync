@@ -116,6 +116,9 @@ export interface DiceRollEntry {
   breakdown: string;
   total: number;
   timestamp: number;
+  diceSum?: number;
+  diceMax?: number;
+  hidden?: boolean;
 }
 
 export interface ChatMessage {
@@ -303,7 +306,7 @@ export type SyncMessage =
   | { type: 'GM_VITAL_UPDATE'; payload: { campaignCode: string; characterName: string; field: VitalKey; delta: number } }
   | { type: 'REST_APPLIED'; payload: { campaignCode: string; characterName: string; restType: 'short' | 'long' } }
   | { type: 'CAMPAIGN_SETTINGS_UPDATE'; payload: { campaignCode: string; settings: CampaignSettings } }
-  | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number } }
+  | { type: 'DICE_ROLL'; payload: { campaignCode: string; rollerName: string; label: string; diceExpr: string; breakdown: string; total: number; diceSum?: number; diceMax?: number } }
   | { type: 'CHAT_MESSAGE'; payload: { campaignCode: string; senderName: string; text: string } }
   | { type: 'COMBAT_REQUEST'; payload: { campaignCode: string } }
   | { type: 'COMBAT_INITIATIVE_ROLL'; payload: { campaignCode: string; characterName: string; roll: number } }

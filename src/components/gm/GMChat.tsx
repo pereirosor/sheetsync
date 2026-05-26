@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../store';
 import type { ChatMessage, DiceRollEntry } from '../../types';
 import GMDiceRoller from './GMDiceRoller';
+import { diceTierColor } from '../../utils/diceColor';
 
 type FeedItem =
   | { kind: 'roll'; ts: number; e: DiceRollEntry }
@@ -54,20 +55,14 @@ export default function GMChat() {
             item.kind === 'roll' ? (
               <div key={item.e.id} className="gm-chat-row">
                 <span className="gm-chat-time">{timeStr(item.ts)}</span>
+                {item.e.hidden && (
+                  <span style={{ color: 'var(--text2)', fontSize: 11, fontStyle: 'italic' }}>🔒 Rolagem oculta ·</span>
+                )}
                 <span className="gm-chat-sender">{item.e.rollerName}</span>
                 <span style={{ color: 'var(--text2)' }}>{item.e.label}:</span>
                 <span style={{ color: 'var(--text2)', fontSize: 11 }}>{item.e.breakdown}</span>
                 <span style={{ color: 'var(--text2)' }}>=</span>
-                <strong
-                  style={{
-                    color:
-                      item.e.total >= 15
-                        ? 'var(--success)'
-                        : item.e.total <= 5
-                          ? 'var(--danger)'
-                          : 'var(--text)',
-                  }}
-                >
+                <strong style={{ color: diceTierColor(item.e.diceSum, item.e.diceMax) }}>
                   {item.e.total}
                 </strong>
               </div>
