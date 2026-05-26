@@ -1087,7 +1087,7 @@ const tormenta20: GameSystem = {
     { name: 'Sortudo', group: 'Destino', description: 'Gaste 3 PM para rolar novamente um teste recém realizado (apenas uma vez por teste).' },
     { name: 'Surto Heroico', group: 'Destino', description: 'Uma vez por rodada, gaste 5 PM para realizar uma ação padrão ou de movimento adicional.' },
     { name: 'Torcida', group: 'Destino', description: '+2 em testes de perícia e Defesa quando há criaturas inteligentes em alcance médio apenas torcendo por você.', prereqs: { raw: 'Car 13', attributes: { charisma: 13 } } },
-    { name: 'Treinamento em Perícia', group: 'Destino', description: 'Torna-se treinado em uma perícia a sua escolha. Pode ser escolhido várias vezes.' },
+    { name: 'Treinamento em Perícia', group: 'Destino', description: 'Torna-se treinado em uma perícia a sua escolha. Pode ser escolhido várias vezes.', grantsSkillTraining: { count: 1 } },
     { name: 'Venefício', group: 'Destino', description: 'Sem risco de envenenamento acidental ao usar venenos. CD para resistir aos seus venenos +2.', prereqs: { raw: 'Treinado em Ofício (alquimia)', skillsTrained: ['oficio'] } },
     { name: 'Vontade de Ferro', group: 'Destino', description: '+1 PM por cada dois níveis de personagem e +2 em Vontade.', prereqs: { raw: 'Sab 13', attributes: { wisdom: 13 } } },
     // ── Magia ─────────────────────────────────────────────────────────────
@@ -1122,7 +1122,7 @@ const tormenta20: GameSystem = {
     { name: 'Bênção do Mana', group: 'Concedidos', description: '+3 pontos de mana.', prereqs: { raw: 'Devoto de Wynna', other: ['Devoto de Wynna'] } },
     { name: 'Carícia Sombria', group: 'Concedidos', description: 'Gaste 1 PM: toque causa 2d6 de trevas (Fort CD Sab reduz à metade) e recupera PV iguais à metade do dano.', prereqs: { raw: 'Devoto de Tenebra', other: ['Devoto de Tenebra'] } },
     { name: 'Centelha Mágica', group: 'Concedidos', description: 'Aprende e pode lançar uma magia arcana ou divina de 1º círculo escolhida.', prereqs: { raw: 'Devoto de Wynna, não conjurador', other: ['Devoto de Wynna', 'Não possuir Magias'] } },
-    { name: 'Conhecimento Enciclopédico', group: 'Concedidos', description: 'Torna-se treinado em duas perícias baseadas em Inteligência a sua escolha.', prereqs: { raw: 'Devoto de Tanna-Toh', other: ['Devoto de Tanna-Toh'] } },
+    { name: 'Conhecimento Enciclopédico', group: 'Concedidos', description: 'Torna-se treinado em duas perícias baseadas em Inteligência a sua escolha.', prereqs: { raw: 'Devoto de Tanna-Toh', other: ['Devoto de Tanna-Toh'] }, grantsSkillTraining: { count: 2, options: ['conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'guerra', 'investigacao', 'misticismo', 'nobreza', 'oficio'] } },
     { name: 'Conjurar Arma', group: 'Concedidos', description: 'Gaste 1 PM: invoca arma corpo a corpo ou de arremesso com +1 em ataque e dano pela cena.', prereqs: { raw: 'Devoto de Arsenal', other: ['Devoto de Arsenal'] } },
     { name: 'Coragem Total', group: 'Concedidos', description: 'Imune a efeitos de medo (mágicos ou não), exceto fobias raciais.', prereqs: { raw: 'Devoto de Arsenal, Khalmyr, Lin-Wu ou Valkaria', other: ['Devoto de Arsenal, Khalmyr, Lin-Wu ou Valkaria'] } },
     { name: 'Cura Gentil', group: 'Concedidos', description: 'Adiciona o bônus de Carisma (mín. +1) aos PV restaurados pelas suas magias de cura.', prereqs: { raw: 'Devoto de Lena', other: ['Devoto de Lena'] } },
