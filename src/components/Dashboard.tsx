@@ -40,7 +40,8 @@ export default function Dashboard() {
     setJoining(true);
     const result = await joinCampaign(trimmedCode, trimmedName);
     setJoining(false);
-    if (result === 'not_found') setError('Campanha não encontrada. Verifique o código.');
+    if (result === 'already_gm') setError('Você já está nesta campanha como Mestre. Use "Abrir" em "Minhas campanhas".');
+    else if (result === 'not_found') setError('Campanha não encontrada. Verifique o código.');
     else if (result === 'name_taken') setError('Já existe um personagem com esse nome. Escolha outro.');
     else if (result !== 'ok') setError(`Erro: ${result}`);
   };
