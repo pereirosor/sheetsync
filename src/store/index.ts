@@ -219,7 +219,7 @@ interface AppState {
   createGMCharacter: (data: GMCharacterFormData) => void;
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
-  deleteCampaign: () => void;
+  deleteCampaign: () => Promise<void>;
   toggleNPCInScene: (name: string) => void;
 
   // Dice / chat
@@ -699,6 +699,11 @@ export const useStore = create<AppState>((set, get) => ({
         set({ characters: { ...characters, [currentPlayerName]: { ...char, pendingLevelUp: false } } });
         break;
       }
+      case 'CAMPAIGN_DELETED': {
+        addToast('A campanha foi encerrada pelo mestre.', 'warning');
+        get().leaveCampaign();
+        break;
+      }
     }
   },
 
@@ -836,10 +841,13 @@ export const useStore = create<AppState>((set, get) => ({
     set({ campaign: updatedCampaign, characters: newChars });
   },
 
-  deleteCampaign: () => {
-    const { campaign } = get();
+  deleteCampaign: async () => {
+    const { campaign, channel, addToast } = get();
     if (!campaign) return;
-    void supabase.from('campaigns').delete().eq('code', campaign.code);
+    broadcast(channel, { type: 'CAMPAIGN_DELETED', payload: { campaignCode: campaign.code } });
+    const { error } = await supabase.from('campaigns').delete().eq('code', campaign.code);
+    if (error) throw new Error(error.message);
+    addToast('Campanha excluída com sucesso.', 'success');
     get().leaveCampaign();
   },
 
