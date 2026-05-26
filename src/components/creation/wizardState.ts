@@ -11,6 +11,7 @@ export interface WizardState {
   attributesBase: Record<AttributeKey, number>;
   rolledPool: number[];
   rolledAssignments: Partial<Record<AttributeKey, number>>;
+  rollAttempts: number;
   skillChoices: string[];
   startingMoney: number;
   weaponSimple: string;
@@ -32,6 +33,7 @@ export const initialWizardState: WizardState = {
   attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
   rolledPool: [],
   rolledAssignments: {},
+  rollAttempts: 0,
   skillChoices: [],
   startingMoney: 0,
   weaponSimple: '',
