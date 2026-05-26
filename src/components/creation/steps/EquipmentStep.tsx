@@ -12,33 +12,12 @@ function rollD6(): number { return Math.floor(Math.random() * 6) + 1; }
 
 const AUTO_KIT = ['Mochila', 'Saco de Dormir', 'Traje de Viajante'];
 
-const ITEM_PRICES: Record<string, number> = {
-  // armas simples
-  'Adaga': 3, 'Espada Curta': 10, 'Foice': 5, 'Manopla': 3, 'Clava': 3, 'Lança': 5, 'Maça': 10,
-  'Bordão': 3, 'Pique': 5, 'Tacape': 5, 'Arco Curto': 25, 'Besta Leve': 30, 'Azagaia': 3, 'Funda': 1,
-  // armas marciais
-  'Machadinha': 5, 'Cimitarra': 15, 'Espada Longa': 15, 'Florete': 15, 'Machado de Batalha': 10,
-  'Mangual': 8, 'Martelo de Guerra': 12, 'Picareta': 8, 'Tridente': 15, 'Alabarda': 10,
-  'Alfange': 20, 'Gadanho': 20, 'Lança Montada': 10, 'Machado de Guerra': 20, 'Montante': 50,
-  'Arco Longo': 75, 'Besta Pesada': 50,
-  // armaduras
-  'Armadura Acolchoada': 5, 'Armadura de Couro': 20, 'Couro Batido': 100, 'Gibão de Peles': 250,
-  'Couraça': 200, 'Brunea': 300, 'Cota de Malha': 350, 'Loriga Segmentada': 400,
-  'Meia Armadura': 600, 'Armadura Completa': 1500, 'Escudo Leve': 6, 'Escudo Pesado': 12,
-  // itens gerais
-  'Água Benta': 25, 'Algemas': 15, 'Algibeira': 1, 'Barraca': 10, 'Corda (10m)': 1,
-  'Espelho de Metal': 10, 'Instrumento Musical': 5, 'Kit de Ofício': 50, 'Kit de Disfarces': 50,
-  'Kit de Ladrão': 30, 'Kit de Medicamentos': 50, 'Lampião': 7, 'Mochila': 2, 'Odre': 1,
-  'Pé de Cabra': 2, 'Pederneira': 1, 'Ração de Viagem (por dia)': 1, 'Saco de Dormir': 1,
-  'Saco de Lona': 0.5, 'Tocha': 0.1, 'Vara de Madeira (3m)': 0.5,
-  'Ácido': 10, 'Bálsamo Restaurador': 50, 'Bomba': 50, 'Essência de Mana': 50, 'Fogo Alquímico': 20,
-};
 
 export default function EquipmentStep({ state, update }: Props) {
   const [shopTab, setShopTab] = useState<'weapons' | 'armor' | 'items'>('items');
   const prof = tormenta20.classProficiencies[state.charClass] ?? { martialWeapons: false, heavyArmor: false, shields: false };
 
-  const noArmor = state.charClass === 'Arcanista';
+  // Armaduras leves e armas simples são livres para todas as classes (regra T20)
   const simpleWeapons = Object.keys(tormenta20.weaponData).filter((n) => tormenta20.weaponData[n].category === 'simples');
   const martialWeapons = Object.keys(tormenta20.weaponData).filter((n) => tormenta20.weaponData[n].category === 'marcial');
   const lightArmors = Object.keys(tormenta20.armorData).filter((n) => tormenta20.armorData[n].type === 'leve');
@@ -49,32 +28,42 @@ export default function EquipmentStep({ state, update }: Props) {
     update({ startingMoney: total, shoppedItems: [] });
   };
 
-  const spentMoney = state.shoppedItems.reduce((sum, i) => sum + i.price, 0);
+  const spentMoney = state.shoppedItems.reduce((sum, i) => sum + i.price * (i.quantity ?? 1), 0);
   const remainingMoney = state.startingMoney - spentMoney;
 
   const addShopItem = (name: string, price: number) => {
     if (price > remainingMoney) return;
-    const genId = () => Math.random().toString(36).slice(2, 9);
-    const item: EquipmentItem & { price: number } = {
-      id: genId(),
-      name,
-      type: 'item',
-      bonusOrDamage: '',
-      weight: (tormenta20.generalItemData[name]?.weight ?? tormenta20.weaponData[name]?.weight ?? tormenta20.armorData[name]?.weight ?? 0),
-      notes: '',
-      price,
-    };
-    update({ shoppedItems: [...state.shoppedItems, item] });
+    const existing = state.shoppedItems.find((i) => i.name === name);
+    if (existing) {
+      update({ shoppedItems: state.shoppedItems.map((i) => i.name === name ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i) });
+    } else {
+      const genId = () => Math.random().toString(36).slice(2, 9);
+      const item: EquipmentItem & { price: number } = {
+        id: genId(),
+        name,
+        type: 'item',
+        bonusOrDamage: '',
+        weight: (tormenta20.generalItemData[name]?.weight ?? tormenta20.weaponData[name]?.weight ?? tormenta20.armorData[name]?.weight ?? 0),
+        notes: '',
+        price,
+      };
+      update({ shoppedItems: [...state.shoppedItems, item] });
+    }
   };
 
   const removeShopItem = (id: string) => {
-    update({ shoppedItems: state.shoppedItems.filter((i) => i.id !== id) });
+    const item = state.shoppedItems.find((i) => i.id === id);
+    if (item && (item.quantity ?? 1) > 1) {
+      update({ shoppedItems: state.shoppedItems.map((i) => i.id === id ? { ...i, quantity: (i.quantity ?? 1) - 1 } : i) });
+    } else {
+      update({ shoppedItems: state.shoppedItems.filter((i) => i.id !== id) });
+    }
   };
 
   const shopItems = {
-    weapons: [...Object.entries(tormenta20.weaponData).map(([name, w]) => ({ name, price: ITEM_PRICES[name] ?? 0, info: `${w.damage} ${w.damageType}` }))],
-    armor: [...Object.entries(tormenta20.armorData).map(([name, a]) => ({ name, price: ITEM_PRICES[name] ?? 0, info: `Defesa ${a.defenseBonus}` }))],
-    items: [...Object.entries(tormenta20.generalItemData).map(([name]) => ({ name, price: ITEM_PRICES[name] ?? 0, info: tormenta20.generalItemData[name].description ?? '' }))],
+    weapons: [...Object.entries(tormenta20.weaponData).map(([name, w]) => ({ name, price: w.price, info: `${w.damage} ${w.damageType}` }))],
+    armor: [...Object.entries(tormenta20.armorData).map(([name, a]) => ({ name, price: a.price, info: `Defesa ${a.defenseBonus}` }))],
+    items: [...Object.entries(tormenta20.generalItemData).map(([name, ref]) => ({ name, price: ref.price, info: ref.description ?? '' }))],
   };
 
   return (
@@ -115,35 +104,27 @@ export default function EquipmentStep({ state, update }: Props) {
         </div>
       )}
 
-      {/* Armadura — Arcanistas não recebem armadura inicial */}
-      {noArmor ? (
-        <div className="wizard-info-card">
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-            Arcanistas começam <b>sem armadura</b> (regra T20 — armaduras interferem nos gestos mágicos).
-          </p>
-        </div>
-      ) : (
-        <div className="form-row">
-          <label>Armadura inicial {prof.heavyArmor ? '(pode escolher pesada)' : '(leve)'}</label>
-          <select value={state.armorPick} onChange={(e) => update({ armorPick: e.target.value })}>
-            <option value="">— Selecione —</option>
-            <optgroup label="Armadura Leve">
-              {lightArmors.map((name) => {
+      {/* Armadura inicial — leve sempre disponível, pesada se proficiente */}
+      <div className="form-row">
+        <label>Armadura inicial {prof.heavyArmor ? '(pode escolher pesada)' : '(leve)'}</label>
+        <select value={state.armorPick} onChange={(e) => update({ armorPick: e.target.value })}>
+          <option value="">— Selecione —</option>
+          <optgroup label="Armadura Leve">
+            {lightArmors.map((name) => {
+              const a = tormenta20.armorData[name];
+              return <option key={name} value={name}>{name} (Def {a.defenseBonus})</option>;
+            })}
+          </optgroup>
+          {prof.heavyArmor && (
+            <optgroup label="Armadura Pesada">
+              {heavyArmors.map((name) => {
                 const a = tormenta20.armorData[name];
                 return <option key={name} value={name}>{name} (Def {a.defenseBonus})</option>;
               })}
             </optgroup>
-            {prof.heavyArmor && (
-              <optgroup label="Armadura Pesada">
-                {heavyArmors.map((name) => {
-                  const a = tormenta20.armorData[name];
-                  return <option key={name} value={name}>{name} (Def {a.defenseBonus})</option>;
-                })}
-              </optgroup>
-            )}
-          </select>
-        </div>
-      )}
+          )}
+        </select>
+      </div>
 
       {/* Escudo (se proficiente) */}
       {prof.shields && (
@@ -213,8 +194,10 @@ export default function EquipmentStep({ state, update }: Props) {
               <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>Itens comprados:</p>
               {state.shoppedItems.map((item) => (
                 <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ flex: 1, fontSize: 13 }}>{item.name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--gold)' }}>{item.price} T$</span>
+                  <span style={{ flex: 1, fontSize: 13 }}>
+                    {item.name}{(item.quantity ?? 1) > 1 && <span style={{ color: 'var(--gold)', marginLeft: 4 }}>x{item.quantity}</span>}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--gold)' }}>{item.price * (item.quantity ?? 1)} T$</span>
                   <button className="btn btn-sm" style={{ fontSize: 11, padding: '1px 6px', color: 'var(--danger)' }} onClick={() => removeShopItem(item.id)}>×</button>
                 </div>
               ))}
