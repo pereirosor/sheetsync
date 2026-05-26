@@ -314,7 +314,7 @@ export type SyncMessage =
   | { type: 'COMBAT_START'; payload: { campaignCode: string; combatants: CombatantEntry[] } }
   | { type: 'COMBAT_NEXT_TURN'; payload: { campaignCode: string; currentIndex: number; round: number } }
   | { type: 'COMBAT_END'; payload: { campaignCode: string } }
-  | { type: 'LEVEL_UP_RELEASED'; payload: { campaignCode: string } }
+  | { type: 'LEVEL_UP_RELEASED'; payload: { campaignCode: string; characterName?: string } }
   | { type: 'LEVEL_UP_RESET'; payload: { campaignCode: string } };
 
 export interface GMNote {

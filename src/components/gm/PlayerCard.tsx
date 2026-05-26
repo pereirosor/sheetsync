@@ -20,6 +20,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const toggleCondition = useStore((s) => s.toggleCondition);
   const addToast = useStore((s) => s.addToast);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
+  const releaseLevelUpFor = useStore((s) => s.releaseLevelUpFor);
 
   const [customDelta, setCustomDelta] = useState('');
   const [isHeal, setIsHeal] = useState(false);
@@ -60,7 +61,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <h3 style={{ fontSize: 15, color: isNPC ? 'var(--mana)' : 'var(--gold)' }}>{char.name || characterName}</h3>
-                {char.pendingLevelUp && (
+                {char.pendingLevelUp ? (
                   <span style={{
                     fontSize: 9, fontWeight: 700, letterSpacing: '.06em',
                     padding: '1px 6px', borderRadius: 10,
@@ -69,6 +70,15 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
                   }}>
                     ⬆ LVL UP
                   </span>
+                ) : !isNPC && (
+                  <button
+                    className="btn btn-secondary btn-xs"
+                    style={{ fontSize: 9, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)', padding: '1px 6px' }}
+                    onClick={() => releaseLevelUpFor(characterName)}
+                    title="Liberar Level Up para este jogador"
+                  >
+                    ⬆ Liberar LVL
+                  </button>
                 )}
               </div>
               <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
