@@ -56,10 +56,39 @@ export default function AttributesStep({ state, update }: Props) {
     update({ attributesBase: newBases });
   };
 
+  const pool = state.rolledPool.length > 0 ? state.rolledPool : pendingPool;
+  const assignedIdxs = new Set(Object.values(state.rolledAssignments));
+
+  const MAX_ROLLS = 3;
+
   const rollAll = () => {
-    const pool = ALL_ATTRS.map(() => roll4d6Drop());
-    setPendingPool(pool);
-    update({ rolledPool: pool, rolledAssignments: {}, attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 } });
+    if (state.rollAttempts >= MAX_ROLLS) return;
+    const newPool = ALL_ATTRS.map(() => roll4d6Drop());
+    setPendingPool(newPool);
+    update({
+      rolledPool: newPool, rolledAssignments: {},
+      attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
+      rollAttempts: state.rollAttempts + 1,
+    });
+  };
+
+  const modSum = pool.reduce((s, v) => s + calcMod(v), 0);
+  const canRerollLowest = pool.length > 0 && modSum < 6;
+
+  const rerollLowest = () => {
+    if (!canRerollLowest) return;
+    let lowestIdx = 0;
+    for (let i = 1; i < pool.length; i++) {
+      if (pool[i] < pool[lowestIdx]) lowestIdx = i;
+    }
+    const newPool = [...pool];
+    newPool[lowestIdx] = roll4d6Drop();
+    const newBases = { ...state.attributesBase };
+    for (const [a, idx] of Object.entries(state.rolledAssignments) as [AttributeKey, number][]) {
+      newBases[a] = (newPool[idx] ?? 10) - 10;
+    }
+    setPendingPool(newPool);
+    update({ rolledPool: newPool, attributesBase: newBases });
   };
 
   const assignRoll = (attr: AttributeKey, poolIdx: number) => {
@@ -69,14 +98,10 @@ export default function AttributesStep({ state, update }: Props) {
     prev[attr] = poolIdx;
     const newBases: Record<AttributeKey, number> = { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
     for (const [a, idx] of Object.entries(prev) as [AttributeKey, number][]) {
-      const pool = state.rolledPool.length > 0 ? state.rolledPool : pendingPool;
       newBases[a] = (pool[idx] ?? 10) - 10;
     }
     update({ rolledAssignments: prev, attributesBase: newBases });
   };
-
-  const pool = state.rolledPool.length > 0 ? state.rolledPool : pendingPool;
-  const assignedIdxs = new Set(Object.values(state.rolledAssignments));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -132,11 +157,63 @@ export default function AttributesStep({ state, update }: Props) {
 
       {state.attributeMethod === 'roll' && (
         <>
-          <button className="btn btn-gold" onClick={rollAll}>
-            Rolar 4d6 (descarta menor)
+          <button
+            className="btn btn-gold"
+            onClick={rollAll}
+            disabled={state.rollAttempts >= MAX_ROLLS}
+          >
+            {state.rollAttempts >= MAX_ROLLS
+              ? `Rolagens esgotadas (${MAX_ROLLS}/${MAX_ROLLS})`
+              : state.rollAttempts === 0 ? 'Rolar 4d6 (descarta menor)' : 'Rolar novamente'}
           </button>
+
+          <div className="wizard-info-card" style={{ textAlign: 'center', fontSize: 13 }}>
+            {state.rollAttempts === 0 && (
+              <span style={{ color: 'var(--text2)' }}>
+                Você tem <b style={{ color: 'var(--gold)' }}>{MAX_ROLLS} rolagens</b> disponíveis.
+                Use com cuidado — o jogo mantém apenas o último conjunto.
+              </span>
+            )}
+            {state.rollAttempts === 1 && (
+              <span style={{ color: 'var(--text2)' }}>Rolagem <b>1 de {MAX_ROLLS}</b></span>
+            )}
+            {state.rollAttempts === 2 && (
+              <span>
+                <span style={{ color: 'var(--text2)' }}>Rolagem <b>2 de {MAX_ROLLS}</b></span>
+                <span style={{ display: 'block', marginTop: 4, color: 'var(--warning, #e0a020)' }}>
+                  ⚠ Atenção: a próxima será sua última rolagem possível.
+                </span>
+              </span>
+            )}
+            {state.rollAttempts === 3 && (
+              <span style={{ color: 'var(--danger)' }}>
+                <b>Rolagem 3 de {MAX_ROLLS}</b> — você usou todas as rolagens. O conjunto atual é definitivo.
+              </span>
+            )}
+          </div>
+
           {pool.length > 0 && (
             <>
+              <div className="wizard-info-card" style={{ background: canRerollLowest ? 'rgba(224,160,32,0.08)' : undefined }}>
+                <p style={{ fontSize: 12, marginBottom: canRerollLowest ? 6 : 0 }}>
+                  Soma dos modificadores:{' '}
+                  <b style={{ color: modSum < 6 ? 'var(--warning, #e0a020)' : 'var(--success, #5ce65c)' }}>
+                    {modSum >= 0 ? `+${modSum}` : modSum}
+                  </b>
+                  {modSum < 6 && <span style={{ color: 'var(--text2)', marginLeft: 8 }}>(precisa ≥ +6)</span>}
+                </p>
+                {canRerollLowest && (
+                  <>
+                    <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8 }}>
+                      Regra T20: como a soma dos modificadores é menor que +6, você pode rolar novamente o menor valor.
+                    </p>
+                    <button className="btn btn-secondary btn-sm" onClick={rerollLowest}>
+                      🎲 Rolar o menor ({Math.min(...pool)})
+                    </button>
+                  </>
+                )}
+              </div>
+
               <div className="wizard-info-card">
                 <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Resultados — clique no atributo para atribuir</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
