@@ -3,6 +3,7 @@ import { useStore } from '../../store';
 import type { SpellItem, SpellRef } from '../../types';
 import { evalDiceExpr } from '../../utils/dice';
 import AutocompleteInput from '../ui/AutocompleteInput';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import tormenta20 from '../../systems/tormenta20';
 
 interface Props {
@@ -31,6 +32,7 @@ export default function SpellsTab({ characterName }: Props) {
   const rollDice = useStore((s) => s.rollDice);
   const [searchVal, setSearchVal] = useState('');
   const [expandedAmps, setExpandedAmps] = useState<Set<string>>(new Set());
+  const [pendingDelete, setPendingDelete] = useState<SpellItem | null>(null);
 
   if (!char) return null;
 
@@ -43,7 +45,9 @@ export default function SpellsTab({ characterName }: Props) {
 
   const setSpells = (spells: SpellItem[]) => updateCharacter(characterName, { spells });
   const addSpell = () => setSpells([...char.spells, emptySpell()]);
-  const removeSpell = (id: string) => setSpells(char.spells.filter((s) => s.id !== id));
+  const confirmRemove = () => {
+    if (pendingDelete) setSpells(char.spells.filter((s) => s.id !== pendingDelete.id));
+  };
   const updateSpell = (id: string, field: keyof SpellItem, value: string | number) =>
     setSpells(char.spells.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
 
@@ -58,6 +62,15 @@ export default function SpellsTab({ characterName }: Props) {
 
   return (
     <div>
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Remover magia"
+          message={`Deletar a magia '${pendingDelete.name || 'sem nome'}'? Esta ação não pode ser desfeita.`}
+          confirmLabel="Remover"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       <div className="flex-between mb2">
         <p className="sec-title" style={{ margin: 0 }}>Magias e Habilidades</p>
         <button className="btn btn-secondary btn-sm" onClick={addSpell}>+ Vazia</button>
@@ -109,7 +122,7 @@ export default function SpellsTab({ characterName }: Props) {
                       onChange={(e) => updateSpell(spell.id, 'manaCost', Number(e.target.value))} />
                   </div>
                 </div>
-                <button className="btn-ghost btn-sm" onClick={() => removeSpell(spell.id)}
+                <button className="btn-ghost btn-sm" onClick={() => setPendingDelete(spell)}
                   style={{ color: 'var(--danger)', flexShrink: 0 }}>
                   ✕
                 </button>

@@ -4,10 +4,8 @@ import { useStore } from '../store';
 export default function Dashboard() {
   const user = useStore((s) => s.user);
   const myCampaigns = useStore((s) => s.myCampaigns);
-  const pendingGMCode = useStore((s) => s.pendingGMCode);
   const signOut = useStore((s) => s.signOut);
   const createCampaign = useStore((s) => s.createCampaign);
-  const confirmGMEntry = useStore((s) => s.confirmGMEntry);
   const openCampaign = useStore((s) => s.openCampaign);
   const joinCampaign = useStore((s) => s.joinCampaign);
 
@@ -46,46 +44,6 @@ export default function Dashboard() {
     else if (result === 'name_taken') setError('Já existe um personagem com esse nome. Escolha outro.');
     else if (result !== 'ok') setError(`Erro: ${result}`);
   };
-
-  // Show pending GM code screen after campaign creation
-  if (pendingGMCode) {
-    return (
-      <div className="home-wrap">
-        <div className="home-card" style={{ textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--gold)', marginBottom: 8 }}>Campanha Criada!</h2>
-          <p style={{ color: 'var(--text2)', marginBottom: 24 }}>
-            Compartilhe este código com os jogadores:
-          </p>
-          <div
-            style={{
-              background: 'var(--bg-card2)',
-              border: '2px solid var(--gold)',
-              borderRadius: 8,
-              padding: '20px 32px',
-              fontSize: 40,
-              fontFamily: 'Cinzel, serif',
-              letterSpacing: 12,
-              color: 'var(--gold)',
-              marginBottom: 12,
-              userSelect: 'all',
-            }}
-          >
-            {pendingGMCode}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 28 }}>
-            Clique no código para selecionar e copiar
-          </p>
-          <button
-            className="btn btn-gold w-full"
-            style={{ fontSize: 15, padding: '12px 20px' }}
-            onClick={confirmGMEntry}
-          >
-            Entrar no Painel do Mestre →
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="home-wrap">

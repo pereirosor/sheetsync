@@ -173,7 +173,6 @@ interface AppState {
 
   // Campaign session
   role: Role | null;
-  pendingGMCode: string | null;
   campaign: Campaign | null;
   currentPlayerName: string | null;
   characters: Record<string, Character>;
@@ -200,7 +199,6 @@ interface AppState {
   // Campaign lifecycle
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
-  confirmGMEntry: () => Promise<void>;
   openCampaign: (code: string) => Promise<void>;
   joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | string>;
   leaveCampaign: () => void;
@@ -264,7 +262,6 @@ export const useStore = create<AppState>((set, get) => ({
   authLoading: true,
   myCampaigns: [],
   role: null,
-  pendingGMCode: null,
   campaign: null,
   currentPlayerName: null,
   characters: {},
@@ -325,7 +322,6 @@ export const useStore = create<AppState>((set, get) => ({
       user: null,
       myCampaigns: [],
       role: null,
-      pendingGMCode: null,
       campaign: null,
       currentPlayerName: null,
       characters: {},
@@ -379,15 +375,9 @@ export const useStore = create<AppState>((set, get) => ({
     };
     await saveCampaign(campaign);
     await supabase.from('campaign_members').insert({ campaign_code: code, user_id: user.id, role: 'gm' });
-    set({ campaign, pendingGMCode: code, characters: {} });
     await get().loadMyCampaigns();
-  },
-
-  confirmGMEntry: async () => {
-    const { pendingGMCode } = get();
-    if (!pendingGMCode) return;
-    await get().openCampaign(pendingGMCode);
-    set({ pendingGMCode: null });
+    await get().openCampaign(code);
+    get().addToast(`Campanha criada! Código: ${code} — compartilhe com seus jogadores.`, 'success');
   },
 
   openCampaign: async (code: string) => {

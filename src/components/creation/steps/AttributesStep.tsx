@@ -143,17 +143,9 @@ export default function AttributesStep({ state, update }: Props) {
                   {pool.map((v, i) => (
                     <span
                       key={i}
-                      style={{
-                        padding: '4px 12px',
-                        background: assignedIdxs.has(i) ? 'var(--bg-card2)' : 'var(--gold)',
-                        color: assignedIdxs.has(i) ? 'var(--text2)' : '#000',
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        fontSize: 16,
-                        opacity: assignedIdxs.has(i) ? 0.5 : 1,
-                        cursor: dragging !== null && !assignedIdxs.has(i) ? 'pointer' : 'default',
-                      }}
+                      className={`dice-roll${assignedIdxs.has(i) ? ' assigned' : ''}${dragging === i ? ' selected' : ''}`}
                       onClick={() => {
+                        if (assignedIdxs.has(i)) return;
                         if (dragging !== null) { setDragging(null); return; }
                         setDragging(i);
                       }}

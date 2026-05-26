@@ -86,6 +86,65 @@ function isStepValid(step: StepId, state: WizardState): boolean {
   }
 }
 
+function getMissingItems(step: StepId, state: WizardState): string[] {
+  const items: string[] = [];
+  switch (step) {
+    case 'race': {
+      if (!state.race) { items.push('Selecione uma raça'); break; }
+      const needed = getVariableCount(state.race);
+      const chosen = Object.keys(state.raceBonusChoices).length;
+      if (needed > 0 && chosen < needed) items.push(`Escolha ${needed - chosen} bônus de atributo restante(s)`);
+      break;
+    }
+    case 'class':
+      if (!state.charClass) items.push('Selecione uma classe');
+      break;
+    case 'classPath':
+      if (!state.classPath) items.push('Escolha um caminho/especialização');
+      break;
+    case 'origin':
+      if (!state.origin) items.push('Selecione uma origem');
+      else if (state.originBenefits.length < 2) items.push('Escolha 2 benefícios de origem');
+      break;
+    case 'attributes': {
+      if (state.attributeMethod === 'point-buy') {
+        const spent = ALL_ATTRS.reduce((s, a) => {
+          const v = state.attributesBase[a];
+          return s + (v === -1 ? -1 : v);
+        }, 0);
+        if (spent < 10) items.push(`Distribua ${10 - spent} ponto(s) restante(s)`);
+        else if (spent > 10) items.push('Você excedeu o limite de pontos');
+      } else {
+        const missing = ALL_ATTRS.filter((a) => state.rolledAssignments[a] === undefined).length;
+        if (missing > 0) items.push(`Atribua ${missing} valor(es) aos atributos`);
+      }
+      break;
+    }
+    case 'skills': {
+      const cd = tormenta20.classData[state.charClass];
+      if (cd) {
+        for (const group of cd.skillChoices) {
+          const chosen = state.skillChoices.filter((s) => group.options.includes(s)).length;
+          if (chosen < group.count) items.push(`Escolha mais ${group.count - chosen} perícia(s)`);
+        }
+      }
+      break;
+    }
+    case 'equipment': {
+      if (!state.weaponSimple) items.push('Escolha uma arma simples');
+      if (state.charClass !== 'Arcanista' && !state.armorPick) items.push('Escolha uma armadura');
+      break;
+    }
+    case 'spells': {
+      const max = tormenta20.classStartingSpells[state.charClass] ?? 0;
+      const diff = max - state.spellsPicked.length;
+      if (diff > 0) items.push(`Escolha ${diff} magia(s)`);
+      break;
+    }
+  }
+  return items;
+}
+
 function buildCharacter(current: Character, state: WizardState): Partial<Character> {
   const raceInfo = tormenta20.raceData[state.race];
   const cd = tormenta20.classData[state.charClass];
@@ -194,6 +253,7 @@ export default function CharacterCreationWizard() {
   const updateCharacter = useStore((s) => s.updateCharacter);
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const campaign = useStore((s) => s.campaign);
+  const addToast = useStore((s) => s.addToast);
 
   const [wizState, setWizState] = useState<WizardState>(initialWizardState);
   const [stepIdx, setStepIdx] = useState(0);
@@ -209,7 +269,11 @@ export default function CharacterCreationWizard() {
   const update = (patch: Partial<WizardState>) => setWizState((s) => ({ ...s, ...patch }));
 
   const handleNext = async () => {
-    if (!canNext) return;
+    if (!canNext) {
+      const missing = getMissingItems(currentStep, wizState);
+      if (missing.length > 0) addToast(missing.join(' • '), 'warning');
+      return;
+    }
     if (isLast) {
       setSaving(true);
       const patch = buildCharacter(char, wizState);
