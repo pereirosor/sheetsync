@@ -200,7 +200,7 @@ interface AppState {
   initChannel: (campaignCode: string) => void;
   createCampaign: () => Promise<void>;
   openCampaign: (code: string) => Promise<void>;
-  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | string>;
+  joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | 'already_gm' | string>;
   leaveCampaign: () => void;
 
   // Character mutations
@@ -425,6 +425,15 @@ export const useStore = create<AppState>((set, get) => ({
     const { user } = get();
     if (!user) return 'not_found';
     try {
+      // 0. Block dual-role: check if user is already a member with a different role
+      const { data: existing_membership } = await supabase
+        .from('campaign_members')
+        .select('role')
+        .eq('campaign_code', code)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existing_membership?.role === 'gm') return 'already_gm';
+
       // 1. Join as member via RPC (SECURITY DEFINER — bypasses RLS)
       const { data: joined } = await supabase.rpc('join_campaign', { p_code: code });
       if (!joined) return 'not_found';
@@ -615,7 +624,9 @@ export const useStore = create<AppState>((set, get) => ({
               : { ...vital, current: Math.min(vital.max, vital.current + v) };
         }
         set({ characters: { ...characters, [characterName]: { ...char, vitals: newVitals } } });
-        addToast(restType === 'long' ? 'Descanso longo aplicado!' : 'Descanso curto aplicado!', 'heal');
+        if (characterName === get().currentPlayerName) {
+          addToast(restType === 'long' ? 'Descanso longo aplicado!' : 'Descanso curto aplicado!', 'heal');
+        }
         break;
       }
       case 'CAMPAIGN_SETTINGS_UPDATE': {
