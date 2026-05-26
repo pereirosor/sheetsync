@@ -17,9 +17,9 @@ export default function WizardNav({ onBack, onNext, nextLabel, nextDisabled, isL
       )}
       <button
         className="btn btn-gold"
-        style={{ flex: 2 }}
+        style={{ flex: 2, opacity: nextDisabled ? 0.55 : 1, cursor: nextDisabled ? 'not-allowed' : 'pointer' }}
         onClick={onNext}
-        disabled={nextDisabled || loading}
+        disabled={loading}
       >
         {loading ? 'Aguarde...' : (nextLabel ?? (isLast ? 'Finalizar e Entrar' : 'Próximo →'))}
       </button>

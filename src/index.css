@@ -175,6 +175,31 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   box-shadow: var(--shadow);
 }
 
+/* ---- Dice roll pills (4d6 attribute roller) ---- */
+.dice-roll {
+  padding: 6px 14px; border-radius: 6px;
+  background: var(--gold); color: #000;
+  font-weight: 700; font-size: 16px;
+  border: 2px solid transparent;
+  cursor: pointer; user-select: none; display: inline-block;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.dice-roll:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.4);
+  border-color: var(--text);
+}
+.dice-roll.selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--gold), 0 4px 10px rgba(0,0,0,.4);
+  transform: translateY(-3px);
+}
+.dice-roll.assigned {
+  background: var(--bg-card2); color: var(--text2);
+  opacity: .5; cursor: default;
+}
+.dice-roll.assigned:hover { transform: none; box-shadow: none; border-color: transparent; }
+
 /* ---- Toast container ---- */
 .toast-container {
   position: fixed; bottom: 20px; right: 20px;

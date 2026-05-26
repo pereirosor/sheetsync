@@ -3,6 +3,7 @@ import { useStore } from '../../store';
 import type { EquipmentItem, WeaponRef, ArmorRef, GeneralItemRef } from '../../types';
 import { evalDiceExpr } from '../../utils/dice';
 import AutocompleteInput from '../ui/AutocompleteInput';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import tormenta20 from '../../systems/tormenta20';
 
 interface Props {
@@ -63,12 +64,22 @@ export default function EquipmentTab({ characterName }: Props) {
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
   const [searchVal, setSearchVal] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<EquipmentItem | null>(null);
 
   if (!char) return null;
 
   const setItems = (equipment: EquipmentItem[]) => updateCharacter(characterName, { equipment });
   const addItem = () => setItems([...char.equipment, emptyItem()]);
-  const removeItem = (id: string) => setItems(char.equipment.filter((i) => i.id !== id));
+  const requestRemove = (item: EquipmentItem) => {
+    if (item.type === 'weapon' || item.type === 'armor') {
+      setPendingDelete(item);
+    } else {
+      setItems(char.equipment.filter((i) => i.id !== item.id));
+    }
+  };
+  const confirmRemove = () => {
+    if (pendingDelete) setItems(char.equipment.filter((i) => i.id !== pendingDelete.id));
+  };
   const updateItem = (id: string, field: keyof EquipmentItem, value: string | number) =>
     setItems(char.equipment.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
 
@@ -82,8 +93,19 @@ export default function EquipmentTab({ characterName }: Props) {
   const maxWeight = char.attributes.strength * 5;
   const overWeight = totalWeight > maxWeight;
 
+  const deleteTypeLabel = pendingDelete?.type === 'weapon' ? 'arma' : 'armadura';
+
   return (
     <div>
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Remover ${deleteTypeLabel}`}
+          message={`Deletar a ${deleteTypeLabel} '${pendingDelete.name || 'sem nome'}'? Esta ação não pode ser desfeita.`}
+          confirmLabel="Remover"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       <div className="flex-between mb2">
         <p className="sec-title" style={{ margin: 0 }}>Equipamentos</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -182,7 +204,7 @@ export default function EquipmentTab({ characterName }: Props) {
                         🎲
                       </button>
                     )}
-                    <button className="btn-ghost btn-sm" onClick={() => removeItem(item.id)}
+                    <button className="btn-ghost btn-sm" onClick={() => requestRemove(item)}
                       title="Remover" style={{ color: 'var(--danger)', padding: '2px 6px' }}>
                       ✕
                     </button>
