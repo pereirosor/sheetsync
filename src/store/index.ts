@@ -623,8 +623,8 @@ export const useStore = create<AppState>((set, get) => ({
         break;
       }
       case 'DICE_ROLL': {
-        const { rollerName, label, diceExpr, breakdown, total } = msg.payload;
-        const entry: DiceRollEntry = { id: genId(), rollerName, label, diceExpr, breakdown, total, timestamp: Date.now() };
+        const { rollerName, label, diceExpr, breakdown, total, diceSum, diceMax } = msg.payload;
+        const entry: DiceRollEntry = { id: genId(), rollerName, label, diceExpr, breakdown, total, diceSum, diceMax, timestamp: Date.now() };
         set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
         break;
       }
@@ -845,13 +845,15 @@ export const useStore = create<AppState>((set, get) => ({
     if (!campaign) return;
     const full: DiceRollEntry = { ...entry, id: genId(), timestamp: Date.now() };
     set((s) => ({ diceLog: [full, ...s.diceLog].slice(0, 100) }));
-    addToast(`${entry.label}: ${entry.breakdown} = ${entry.total}`, 'info');
-    if (channel) {
-      const msg: SyncMessage = {
-        type: 'DICE_ROLL',
-        payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total },
-      };
-      broadcast(channel, msg);
+    if (!entry.hidden) {
+      addToast(`${entry.label}: ${entry.breakdown} = ${entry.total}`, 'info');
+      if (channel) {
+        const msg: SyncMessage = {
+          type: 'DICE_ROLL',
+          payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total, diceSum: entry.diceSum, diceMax: entry.diceMax },
+        };
+        broadcast(channel, msg);
+      }
     }
   },
 

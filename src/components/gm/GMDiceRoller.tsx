@@ -21,22 +21,20 @@ export default function GMDiceRoller() {
   const rollDice = useStore((s) => s.rollDice);
   const rollerName = useStore((s) => s.currentPlayerName) ?? 'Mestre';
 
-  function emit(label: string, breakdown: string, total: number) {
+  function emit(label: string, breakdown: string, total: number, diceSum: number, diceMax: number) {
     setLastResult({ label, breakdown, total, mode });
-    if (mode === 'public') {
-      rollDice({ rollerName, label, diceExpr: label, breakdown, total });
-    }
+    rollDice({ rollerName, label, diceExpr: label, breakdown, total, diceSum, diceMax, hidden: mode === 'private' });
   }
 
   function quickRoll(sides: number) {
     const value = Math.floor(Math.random() * sides) + 1;
-    emit(`d${sides}`, `[${value}]`, value);
+    emit(`d${sides}`, `[${value}]`, value, value, sides);
   }
 
   function rollFormula() {
     const result = rollSimpleFormula(formula);
     if (!result) return;
-    emit(formula.trim(), result.breakdown, result.total);
+    emit(formula.trim(), result.breakdown, result.total, result.diceSum, result.diceMax);
   }
 
   return (

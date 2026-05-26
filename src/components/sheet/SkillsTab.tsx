@@ -39,6 +39,8 @@ export default function SkillsTab({ characterName }: Props) {
       diceExpr: `1d20+${skillName}`,
       breakdown: `d20[${result}]${modStr}`,
       total,
+      diceSum: result,
+      diceMax: 20,
     });
   };
 

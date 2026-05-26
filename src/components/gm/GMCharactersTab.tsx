@@ -288,8 +288,8 @@ export default function GMCharactersTab() {
                       if (e.key !== 'Enter') return;
                       const expr = npcDiceExpr[char.name]?.trim();
                       if (!expr) return;
-                      const { total, breakdown } = evalDiceExpr(expr, char);
-                      rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total });
+                      const { total, breakdown, diceSum, diceMax } = evalDiceExpr(expr, char);
+                      rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total, diceSum, diceMax });
                     }}
                   />
                   <button
@@ -298,8 +298,8 @@ export default function GMCharactersTab() {
                     onClick={() => {
                       const expr = npcDiceExpr[char.name]?.trim();
                       if (!expr) return;
-                      const { total, breakdown } = evalDiceExpr(expr, char);
-                      rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total });
+                      const { total, breakdown, diceSum, diceMax } = evalDiceExpr(expr, char);
+                      rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total, diceSum, diceMax });
                     }}
                   >
                     🎲 Rolar

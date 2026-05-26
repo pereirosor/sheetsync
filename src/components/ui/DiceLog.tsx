@@ -1,4 +1,5 @@
 import type { DiceRollEntry } from '../../types';
+import { diceTierColor } from '../../utils/diceColor';
 
 interface Props {
   entries: DiceRollEntry[];
@@ -37,7 +38,7 @@ export default function DiceLog({ entries }: Props) {
             <span style={{ color: 'var(--text2)', flexShrink: 0 }}>{e.label}:</span>
             <span style={{ color: 'var(--text2)', fontSize: 11, flexShrink: 0 }}>{e.breakdown}</span>
             <span style={{ color: 'var(--text2)', flexShrink: 0 }}>=</span>
-            <strong style={{ color: e.total >= 15 ? 'var(--success)' : e.total <= 5 ? 'var(--danger)' : 'var(--text)', flexShrink: 0 }}>
+            <strong style={{ color: diceTierColor(e.diceSum, e.diceMax), flexShrink: 0 }}>
               {e.total}
             </strong>
           </div>

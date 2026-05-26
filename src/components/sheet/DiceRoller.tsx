@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useStore } from '../../store';
 import DiceLog from '../ui/DiceLog';
 
-function parseSimpleDice(expr: string): { total: number; breakdown: string } | null {
+function parseSimpleDice(expr: string): { total: number; breakdown: string; diceSum: number; diceMax: number } | null {
   const cleaned = expr.trim().toLowerCase().replace(/\s+/g, '');
   if (!cleaned) return null;
 
   const tokens = cleaned.split(/(?=[+-])/);
   const parts: string[] = [];
   let total = 0;
+  let diceSum = 0;
+  let diceMax = 0;
 
   for (const token of tokens) {
     if (!token) continue;
@@ -22,6 +24,8 @@ function parseSimpleDice(expr: string): { total: number; breakdown: string } | n
       const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
       const sum = rolls.reduce((a, b) => a + b, 0);
       total += sign * sum;
+      diceSum += sum;
+      diceMax += count * sides;
       const rollStr = rolls.length > 1 ? `(${rolls.join('+')}=${sum})` : `${sum}`;
       parts.push(`${sign < 0 ? '-' : parts.length > 0 ? '+' : ''}${rollStr}`);
       continue;
@@ -38,7 +42,7 @@ function parseSimpleDice(expr: string): { total: number; breakdown: string } | n
     return null;
   }
 
-  return parts.length > 0 ? { total, breakdown: parts.join('') } : null;
+  return parts.length > 0 ? { total, breakdown: parts.join(''), diceSum, diceMax } : null;
 }
 
 const DICE = [4, 6, 8, 10, 12, 20, 100] as const;
@@ -54,7 +58,7 @@ export default function DiceRoller() {
 
   function quickRoll(sides: number) {
     const value = Math.floor(Math.random() * sides) + 1;
-    const entry = { label: `d${sides}`, diceExpr: `1d${sides}`, breakdown: `${value}`, total: value };
+    const entry = { label: `d${sides}`, diceExpr: `1d${sides}`, breakdown: `${value}`, total: value, diceSum: value, diceMax: sides };
     setLastResult(entry);
     rollDice({ rollerName, ...entry });
   }
@@ -63,7 +67,7 @@ export default function DiceRoller() {
     const result = parseSimpleDice(formula);
     if (!result) return;
     const label = formula.trim();
-    const entry = { label, diceExpr: label, breakdown: result.breakdown, total: result.total };
+    const entry = { label, diceExpr: label, breakdown: result.breakdown, total: result.total, diceSum: result.diceSum, diceMax: result.diceMax };
     setLastResult(entry);
     rollDice({ rollerName, ...entry });
   }

@@ -87,8 +87,8 @@ export default function EquipmentTab({ characterName }: Props) {
 
   const handleRoll = (item: EquipmentItem) => {
     if (!item.diceExpr?.trim()) return;
-    const { total, breakdown } = evalDiceExpr(item.diceExpr, char);
-    rollDice({ rollerName: char.name || characterName, label: item.name || 'Item', diceExpr: item.diceExpr, breakdown, total });
+    const { total, breakdown, diceSum, diceMax } = evalDiceExpr(item.diceExpr, char);
+    rollDice({ rollerName: char.name || characterName, label: item.name || 'Item', diceExpr: item.diceExpr, breakdown, total, diceSum, diceMax });
   };
 
   const totalWeight = char.equipment.reduce((s, i) => s + i.weight * (i.quantity ?? 1), 0);

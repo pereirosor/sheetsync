@@ -35,15 +35,15 @@ export default function NPCSheetModal({ character: char, onClose }: Props) {
   const handleExprRoll = () => {
     const expr = diceExpr.trim();
     if (!expr) return;
-    const { total, breakdown } = evalDiceExpr(expr, char);
-    rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total });
+    const { total, breakdown, diceSum, diceMax } = evalDiceExpr(expr, char);
+    rollDice({ rollerName: char.name, label: 'Rolagem', diceExpr: expr, breakdown, total, diceSum, diceMax });
   };
 
   const handleSkillRoll = (skillName: string, modifier: number) => {
     const result = Math.floor(Math.random() * 20) + 1;
     const total = result + modifier;
     const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-    rollDice({ rollerName: char.name, label: skillName, diceExpr: `1d20+${skillName}`, breakdown: `d20[${result}]${modStr}`, total });
+    rollDice({ rollerName: char.name, label: skillName, diceExpr: `1d20+${skillName}`, breakdown: `d20[${result}]${modStr}`, total, diceSum: result, diceMax: 20 });
   };
 
   return (
