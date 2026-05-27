@@ -8,9 +8,10 @@ import VitalsStep from './steps/VitalsStep';
 import FixedFeaturesStep from './steps/FixedFeaturesStep';
 import PowerStep from './steps/PowerStep';
 import LearnSpellsStep from './steps/LearnSpellsStep';
+import GrantSkillStep from './steps/GrantSkillStep';
 import { initialLevelUpState, type LevelUpState } from './levelUpState';
 
-type StepId = 'vitals' | 'features' | 'power' | 'spells';
+type StepId = 'vitals' | 'features' | 'power' | 'grantSkill' | 'spells';
 
 const genId = () => Math.random().toString(36).slice(2, 9);
 
@@ -28,9 +29,16 @@ function hasPowerChoiceAtLevel(charClass: string, newLevel: number): boolean {
   return features.some((f) => /poder de/i.test(f));
 }
 
-function buildSteps(char: Character, newLevel: number): StepId[] {
+function powerGrantsSkill(powerName: string | null): boolean {
+  if (!powerName) return false;
+  const power = tormenta20.generalPowers.find((p) => p.name === powerName);
+  return !!power?.grantsSkillTraining;
+}
+
+function buildSteps(char: Character, newLevel: number, chosenPower: string | null): StepId[] {
   const steps: StepId[] = ['vitals', 'features'];
   if (hasPowerChoiceAtLevel(char.class, newLevel)) steps.push('power');
+  if (powerGrantsSkill(chosenPower)) steps.push('grantSkill');
   const spellsNeeded = getSpellsToLearn(char.class, newLevel);
   if (spellsNeeded > 0) steps.push('spells');
   return steps;
@@ -40,6 +48,7 @@ const STEP_LABELS: Record<StepId, string> = {
   vitals: 'PV & PM',
   features: 'Habilidades',
   power: 'Poder',
+  grantSkill: 'Treinamento em Perícia',
   spells: 'Magias',
 };
 
@@ -48,6 +57,11 @@ function isStepValid(step: StepId, state: LevelUpState, char: Character, newLeve
     case 'vitals': return true;
     case 'features': return true;
     case 'power': return !!state.chosenPower;
+    case 'grantSkill': {
+      const power = tormenta20.generalPowers.find((p) => p.name === state.chosenPower);
+      const needed = power?.grantsSkillTraining?.count ?? 0;
+      return state.grantedSkills.length === needed;
+    }
     case 'spells': {
       const needed = getSpellsToLearn(char.class, newLevel);
       return state.chosenSpells.length === needed;
@@ -73,7 +87,7 @@ export default function LevelUpWizard({ characterName, onClose }: Props) {
   if (!char || !campaign) return null;
 
   const newLevel = char.level + 1;
-  const steps = buildSteps(char, newLevel);
+  const steps = buildSteps(char, newLevel, luState.chosenPower);
   const currentStep = steps[stepIdx];
   const isLast = stepIdx === steps.length - 1;
   const canNext = isStepValid(currentStep, luState, char, newLevel);
@@ -109,6 +123,11 @@ export default function LevelUpWizard({ characterName, onClose }: Props) {
       };
     });
 
+    const newSkills = { ...char.skills };
+    for (const id of luState.grantedSkills) {
+      newSkills[id] = true;
+    }
+
     const patch: Partial<Character> = {
       level: newLevel,
       vitals: {
@@ -118,6 +137,7 @@ export default function LevelUpWizard({ characterName, onClose }: Props) {
       },
       powers: newPowers,
       spells: [...char.spells, ...newSpells],
+      skills: newSkills,
     };
 
     applyLevelUp(characterName, patch);
@@ -135,10 +155,25 @@ export default function LevelUpWizard({ characterName, onClose }: Props) {
     }
   };
 
+  const updatePower = (patch: Partial<LevelUpState>) => {
+    const nextPower = 'chosenPower' in patch ? patch.chosenPower : luState.chosenPower;
+    const wasGranting = powerGrantsSkill(luState.chosenPower);
+    const willGrant = powerGrantsSkill(nextPower ?? null);
+    update(wasGranting && !willGrant ? { ...patch, grantedSkills: [] } : patch);
+  };
+
   const stepContent: Record<StepId, React.ReactNode> = {
     vitals: <VitalsStep char={char} newLevel={newLevel} />,
     features: <FixedFeaturesStep char={char} newLevel={newLevel} />,
-    power: <PowerStep char={char} newLevel={newLevel} state={luState} update={update} />,
+    power: <PowerStep char={char} newLevel={newLevel} state={luState} update={updatePower} />,
+    grantSkill: (
+      <GrantSkillStep
+        char={char}
+        powerName={luState.chosenPower ?? ''}
+        state={luState}
+        update={update}
+      />
+    ),
     spells: (
       <LearnSpellsStep
         char={char}

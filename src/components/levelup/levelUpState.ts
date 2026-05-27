@@ -3,6 +3,7 @@ export interface LevelUpState {
   chosenSpells: string[];
   powerSearch: string;
   powerGroupFilter: string;
+  grantedSkills: string[];
 }
 
 export const initialLevelUpState: LevelUpState = {
@@ -10,4 +11,5 @@ export const initialLevelUpState: LevelUpState = {
   chosenSpells: [],
   powerSearch: '',
   powerGroupFilter: '',
+  grantedSkills: [],
 };

@@ -1,5 +1,6 @@
 import { useStore } from '../../store';
-import tormenta20, { skillTotal } from '../../systems/tormenta20';
+import tormenta20 from '../../systems/tormenta20';
+import { getSkillBreakdown } from '../../utils/skillModifiers';
 
 interface Props {
   characterName: string;
@@ -18,16 +19,11 @@ const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
 
 export default function SkillsTab({ characterName }: Props) {
   const char = useStore((s) => s.characters[characterName]);
-  const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
 
   if (!char) return null;
 
-  const toggleSkill = (id: string) => {
-    updateCharacter(characterName, {
-      skills: { ...char.skills, [id]: !char.skills[id] },
-    });
-  };
+  const raceInfo = tormenta20.raceData[char.race];
 
   const handleRoll = (skillName: string, modifier: number) => {
     const result = rollDie(20);
@@ -60,15 +56,20 @@ export default function SkillsTab({ characterName }: Props) {
         <tbody>
           {tormenta20.skillList.map((skill) => {
             const trained = char.skills[skill.id] ?? false;
-            const attrVal = char.attributes[skill.attribute];
-            const total = skillTotal(attrVal, trained, char.level);
+            const { base, others, total } = getSkillBreakdown(char, skill, raceInfo);
+            const hasOthers = others.length > 0;
+            const othersTotal = others.reduce((s, o) => s + o.value, 0);
+            const othersTitle = others.map((o) => `${o.source}: ${o.value >= 0 ? '+' : ''}${o.value}`).join('\n');
             return (
               <tr key={skill.id}>
                 <td style={{ textAlign: 'center' }}>
                   <input
                     type="checkbox"
                     checked={trained}
-                    onChange={() => toggleSkill(skill.id)}
+                    disabled
+                    title="Treinamento vem da classe, origem e poderes escolhidos"
+                    style={{ cursor: 'not-allowed', opacity: trained ? 1 : 0.4 }}
+                    onChange={() => undefined}
                   />
                 </td>
                 <td>
@@ -77,8 +78,22 @@ export default function SkillsTab({ characterName }: Props) {
                 <td style={{ textAlign: 'center' }}>
                   <span className="skill-attr">{ATTR_ABBR[skill.attribute]}</span>
                 </td>
-                <td className="skill-bonus">
-                  {total >= 0 ? '+' : ''}{total}
+                <td className="skill-bonus" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {hasOthers ? (
+                    <span title={othersTitle} style={{ cursor: 'help' }}>
+                      <span style={{ color: 'var(--text2)', fontSize: 11 }}>
+                        {base >= 0 ? '+' : ''}{base}
+                        <span style={{ margin: '0 3px', color: 'var(--text3)' }}>·</span>
+                        <span style={{ color: 'var(--gold)' }}>
+                          Outros: {othersTotal >= 0 ? '+' : ''}{othersTotal}
+                        </span>
+                        <span style={{ margin: '0 3px', color: 'var(--text3)' }}>·</span>
+                      </span>
+                      <strong>Total: {total >= 0 ? '+' : ''}{total}</strong>
+                    </span>
+                  ) : (
+                    <>{total >= 0 ? '+' : ''}{total}</>
+                  )}
                 </td>
                 <td>
                   <button
@@ -96,7 +111,7 @@ export default function SkillsTab({ characterName }: Props) {
         </tbody>
       </table>
       <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 10 }}>
-        T = Treinado · Bônus = Mod. Atributo + (treinado: 4 + ½ nível)
+        T = Treinado (via classe, origem ou poder) · Bônus = Mod. Atributo + (treinado: 4 + ½ nível)
       </p>
     </div>
   );

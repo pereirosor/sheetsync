@@ -80,6 +80,12 @@ export interface SpellRef {
   amplifications: SpellAmplification[];
 }
 
+export type ItemEffect =
+  | { type: 'skillBonus'; skillId: string; value: number };
+
+export type CharacterModifier =
+  | { id: string; source: string; type: 'skillBonus'; skillId: string; value: number };
+
 export interface EquipmentItem {
   id: string;
   name: string;
@@ -93,6 +99,8 @@ export interface EquipmentItem {
   critical?: string;
   properties?: string;
   quantity?: number;
+  equipped?: boolean;
+  effects?: ItemEffect[];
 }
 
 export interface SpellItem {
@@ -164,6 +172,7 @@ export interface Character {
   conditions?: string[];
   powers?: { name: string; level: number }[];
   pendingLevelUp?: boolean;
+  activeModifiers?: CharacterModifier[];
 }
 
 export interface CampaignSettings {
@@ -204,6 +213,7 @@ export interface RaceInfo {
   attributeBonuses: string;
   abilities: string[];
   attributeMods?: Partial<Record<AttributeKey, number>>;
+  skillBonuses?: Record<string, number>;
 }
 
 export interface ClassAbility {
@@ -245,11 +255,17 @@ export interface PowerPrereqs {
   other?: string[];
 }
 
+export interface SkillTrainingGrant {
+  count: number;
+  options?: string[];
+}
+
 export interface GeneralPower {
   name: string;
   group: PowerGroup;
   description: string;
   prereqs?: PowerPrereqs;
+  grantsSkillTraining?: SkillTrainingGrant;
 }
 
 export interface CasterProgression {
