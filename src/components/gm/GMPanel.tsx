@@ -36,11 +36,28 @@ export default function GMPanel() {
   const sceneTotal = playerNames.length + inSceneNPCNames.length;
 
   function handleMassRest(restType: RestType) {
-    [...playerNames, ...inSceneNPCNames].forEach((name) => applyRest(name, restType));
-    addToast(
-      restType === 'long' ? 'Descanso Longo aplicado a todos!' : 'Descanso Curto aplicado a todos!',
-      'heal',
-    );
+    const skipped: string[] = [];
+    const targets = [...playerNames, ...inSceneNPCNames].filter((name) => {
+      const char = characters[name];
+      const ds = char?.deathState ?? 'alive';
+      if (ds !== 'alive') { skipped.push(name); return false; }
+      return true;
+    });
+
+    targets.forEach((name) => applyRest(name, restType));
+
+    if (targets.length > 0) {
+      addToast(
+        restType === 'long' ? 'Descanso Longo aplicado!' : 'Descanso Curto aplicado!',
+        'heal',
+      );
+    }
+    if (skipped.length > 0) {
+      addToast(`Pulado (inconsciente/morto): ${skipped.join(', ')}.`, 'warning');
+    }
+    if (targets.length === 0) {
+      addToast('Nenhum personagem apto para descansar.', 'warning');
+    }
     setConfirmRest(null);
   }
 

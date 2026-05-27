@@ -86,6 +86,9 @@ export type ItemEffect =
 export type CharacterModifier =
   | { id: string; source: string; type: 'skillBonus'; skillId: string; value: number };
 
+// Death system
+export type DeathStatus = 'alive' | 'dying' | 'stabilized' | 'dead';
+
 export interface EquipmentItem {
   id: string;
   name: string;
@@ -173,6 +176,7 @@ export interface Character {
   powers?: { name: string; level: number }[];
   pendingLevelUp?: boolean;
   activeModifiers?: CharacterModifier[];
+  deathState?: DeathStatus;
 }
 
 export interface CampaignSettings {
@@ -332,7 +336,11 @@ export type SyncMessage =
   | { type: 'COMBAT_END'; payload: { campaignCode: string } }
   | { type: 'LEVEL_UP_RELEASED'; payload: { campaignCode: string; characterName?: string } }
   | { type: 'LEVEL_UP_RESET'; payload: { campaignCode: string } }
-  | { type: 'CAMPAIGN_DELETED'; payload: { campaignCode: string } };
+  | { type: 'CAMPAIGN_DELETED'; payload: { campaignCode: string } }
+  | { type: 'CHARACTER_DIED'; payload: { campaignCode: string; characterName: string } }
+  | { type: 'DEATH_SAVE_ROLLED'; payload: { campaignCode: string; characterName: string; roll: number; total: number; success: boolean } }
+  | { type: 'PLAYER_REPLACED_CHARACTER'; payload: { campaignCode: string; oldName: string; newCharacter: Character } }
+  | { type: 'PLAYER_ABANDONED'; payload: { campaignCode: string; characterName: string } };
 
 export interface GMNote {
   id: string;

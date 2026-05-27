@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
-import type { VitalKey } from '../../types';
+import type { DeathStatus, VitalKey } from '../../types';
 import { CONDITIONS, CONDITION_MAP } from '../../data/conditions';
 import ProgressBar from '../ui/ProgressBar';
 import Badge from '../ui/Badge';
@@ -21,6 +21,9 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const addToast = useStore((s) => s.addToast);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
   const releaseLevelUpFor = useStore((s) => s.releaseLevelUpFor);
+  const rollDeathSave = useStore((s) => s.rollDeathSave);
+  const forceStabilize = useStore((s) => s.forceStabilize);
+  const revive = useStore((s) => s.revive);
 
   const [customDelta, setCustomDelta] = useState('');
   const [isHeal, setIsHeal] = useState(false);
@@ -29,6 +32,12 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
   const [showConditionPicker, setShowConditionPicker] = useState(false);
 
   if (!char || !campaign) return null;
+
+  const deathState: DeathStatus = char.deathState ?? 'alive';
+  const isDying = deathState === 'dying';
+  const isStabilized = deathState === 'stabilized';
+  const isDead = deathState === 'dead';
+  const isIncapacitated = isDying || isStabilized || isDead;
 
   const applyDelta = (field: VitalKey, delta: number) => {
     updateVital(characterName, field, delta);
@@ -61,7 +70,7 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <h3 style={{ fontSize: 15, color: isNPC ? 'var(--mana)' : 'var(--gold)' }}>{char.name || characterName}</h3>
-                {char.pendingLevelUp ? (
+                {!isIncapacitated && char.pendingLevelUp && (
                   <span style={{
                     fontSize: 9, fontWeight: 700, letterSpacing: '.06em',
                     padding: '1px 6px', borderRadius: 10,
@@ -70,7 +79,8 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
                   }}>
                     ⬆ LVL UP
                   </span>
-                ) : !isNPC && (
+                )}
+                {!isIncapacitated && !isNPC && !char.pendingLevelUp && (
                   <button
                     className="btn btn-secondary btn-xs"
                     style={{ fontSize: 9, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)', padding: '1px 6px' }}
@@ -99,9 +109,31 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
         </div>
 
         <div className="gm-card-body">
+          {/* ── Death state banner ─────────────────────────────────────────── */}
+          {isIncapacitated && (
+            <div style={{
+              marginBottom: 12, padding: '8px 12px', borderRadius: 6,
+              background: isDead ? 'rgba(224,82,82,.15)' : 'rgba(224,82,82,.08)',
+              border: `1px solid ${isDead ? 'var(--danger)' : 'rgba(224,82,82,.4)'}`,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 16 }}>{isDead ? '💀' : isStabilized ? '😴' : '🩸'}</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: isDead ? 'var(--danger)' : 'var(--text)', letterSpacing: '.04em' }}>
+                  {isDead ? 'MORTO' : isStabilized ? 'Estabilizado (inconsciente)' : `Caído — Sangrando (${vitals.hp.current} PV)`}
+                </div>
+                {isDying && (
+                  <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
+                    Teste de Constituição CD 15 a cada turno
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Vital bars */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-            <ProgressBar label="PV" current={vitals.hp.current} max={vitals.hp.max} color="var(--hp)" />
+            <ProgressBar label="PV" current={Math.max(0, vitals.hp.current)} max={vitals.hp.max} color={isIncapacitated ? 'var(--danger)' : 'var(--hp)'} />
             {hasMana && (
               <ProgressBar label="Mana" current={vitals.mana.current} max={vitals.mana.max} color="var(--mana)" />
             )}
@@ -149,6 +181,50 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
               <button className="btn btn-secondary btn-sm" onClick={applyCustom}>Aplicar</button>
             </div>
           </div>
+
+          {/* ── Death action buttons ───────────────────────────────────────── */}
+          {isIncapacitated && !isNPC && (
+            <div style={{ background: 'var(--bg)', border: '1px solid rgba(224,82,82,.4)', borderRadius: 6, padding: '10px 12px', marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: 'var(--danger)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Ações de Morte
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {isDying && (
+                  <>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, color: 'var(--text)' }}
+                      onClick={() => rollDeathSave(characterName)}
+                      title="Rolar d20 + mod. CON + nível/2 vs CD 15"
+                    >
+                      🎲 Rolar Teste CON (CD 15)
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11 }}
+                      onClick={() => {
+                        forceStabilize(characterName);
+                        addToast(`${char.name} foi estabilizado pelo mestre.`, 'success');
+                      }}
+                      title="Forçar estabilização sem rolar dado"
+                    >
+                      ✋ Forçar Estabilização
+                    </button>
+                  </>
+                )}
+                {(isStabilized || isDead) && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11, color: 'var(--success)', borderColor: 'rgba(82,201,122,.4)' }}
+                    onClick={() => revive(characterName, 1)}
+                    title="Ressuscitar com 1 PV"
+                  >
+                    ✨ Ressuscitar (1 PV)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Conditions section */}
           <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px' }}>

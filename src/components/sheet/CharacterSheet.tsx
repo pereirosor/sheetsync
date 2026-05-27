@@ -14,6 +14,7 @@ import NotesTab from './NotesTab';
 import DiceRoller from './DiceRoller';
 import CombatRollModal from './CombatRollModal';
 import LevelUpWizard from '../levelup/LevelUpWizard';
+import DeathModal from './DeathModal';
 
 type TabId = 'identity' | 'attributes' | 'skills' | 'equipment' | 'spells' | 'notes';
 
@@ -37,8 +38,13 @@ export default function CharacterSheet() {
   );
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const combatState = useStore((s) => s.combatState);
+  const rollDeathSave = useStore((s) => s.rollDeathSave);
 
   if (!currentPlayerName || !char || !campaign) return null;
+
+  const deathState = char.deathState ?? 'alive';
+  const isDying = deathState === 'dying';
+  const isDead = deathState === 'dead';
 
   const { vitals } = char;
   const fallbackInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
@@ -48,7 +54,8 @@ export default function CharacterSheet() {
   return (
     <>
     <CombatRollModal />
-    {showLevelUp && (
+    {isDead && <DeathModal character={char} />}
+    {showLevelUp && !isDead && (
       <LevelUpWizard characterName={currentPlayerName} onClose={() => setShowLevelUp(false)} />
     )}
     <div className="sheet-root">
@@ -116,12 +123,36 @@ export default function CharacterSheet() {
             )}
           </div>
 
+          {/* Death state banner */}
+          {(isDying || deathState === 'stabilized' || isDead) && (
+            <div style={{
+              padding: '8px 12px', borderRadius: 6, marginBottom: 8,
+              background: isDead ? 'rgba(224,82,82,.15)' : 'rgba(224,82,82,.08)',
+              border: `1px solid ${isDead ? 'var(--danger)' : 'rgba(224,82,82,.4)'}`,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 4 }}>
+                {isDead ? '💀 MORTO' : deathState === 'stabilized' ? '😴 Estabilizado' : `🩸 Sangrando (${vitals.hp.current} PV)`}
+              </div>
+              {isDying && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11, marginTop: 4 }}
+                  onClick={() => rollDeathSave(currentPlayerName)}
+                  title="d20 + mod. CON + nível/2 vs CD 15"
+                >
+                  🎲 Testar Constituição (CD 15)
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="vitals-stack">
             <ProgressBar
               label="PV"
-              current={vitals.hp.current}
+              current={Math.max(0, vitals.hp.current)}
               max={vitals.hp.max}
-              color="var(--hp)"
+              color={isDying || isDead ? 'var(--danger)' : 'var(--hp)'}
             />
             {vitals.mana.max > 0 && (
               <ProgressBar
