@@ -22,6 +22,9 @@ export const CONDITIONS: ConditionDef[] = [
   { name: 'Paralisado', description: 'Incapaz de agir; CA limitada à armadura; ataques adjacentes acertam automaticamente.' },
   { name: 'Sangrando', description: 'Perde 1 PV por rodada; requer ação padrão e Cura CD 15 para estancar.' },
   { name: 'Surdo', description: '-4 em iniciativa; sem comunicação verbal; magias com componente verbal falham.' },
+  { name: 'Inconsciente', description: 'Indefeso, não pode agir. Ataques adjacentes acertam automaticamente.' },
+  { name: 'Estabilizado', description: 'Com 0 PV ou menos, mas não sangra mais. Continua inconsciente até ser curado.' },
+  { name: 'Morto', description: 'Sem ação possível. Aguardando ressurreição ou criação de novo personagem.' },
 ];
 
 export const CONDITION_MAP: Record<string, ConditionDef> = Object.fromEntries(

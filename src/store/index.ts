@@ -9,6 +9,7 @@ import type {
   ChatMessage,
   CombatantEntry,
   CombatState,
+  DeathStatus,
   DiceRollEntry,
   GMCharacterFormData,
   GMNote,
@@ -28,6 +29,20 @@ const generateCode = (): string => {
 const genId = () => Math.random().toString(36).slice(2, 9);
 
 const rollDie = (sides: number) => Math.floor(Math.random() * sides) + 1;
+
+// ── Death system helpers ──────────────────────────────────────────────────────
+
+const DEATH_CONDITIONS = ['Inconsciente', 'Sangrando', 'Estabilizado', 'Morto'] as const;
+
+/** HP threshold below which the character dies (the more negative of -10 vs -hpMax/2) */
+const deathThresholdFor = (hpMax: number): number =>
+  Math.min(-10, -Math.floor(hpMax / 2));
+
+const addCondUnique = (arr: string[], c: string): string[] =>
+  arr.includes(c) ? arr : [...arr, c];
+
+const removeDeathConds = (arr: string[]): string[] =>
+  arr.filter((c) => !(DEATH_CONDITIONS as readonly string[]).includes(c));
 
 // ── Persistence (Supabase) ────────────────────────────────────────────────────
 
@@ -76,6 +91,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   conditions: ch.conditions ?? [],
   powers: ch.powers ?? [],
   pendingLevelUp: ch.pendingLevelUp ?? false,
+  deathState: ch.deathState ?? 'alive',
 });
 
 async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {
@@ -246,6 +262,13 @@ interface AppState {
   releaseLevelUpFor: (name: string) => void;
   resetLevelUp: () => void;
   applyLevelUp: (name: string, patch: Partial<Character>) => void;
+
+  // Death system
+  rollDeathSave: (characterName: string) => void;
+  forceStabilize: (characterName: string) => void;
+  revive: (characterName: string, hp?: number) => void;
+  replaceDeadCharacter: (newName: string) => Promise<'ok' | 'name_taken' | 'error'>;
+  abandonAfterDeath: () => Promise<void>;
 }
 
 const buildChannel = (campaignCode: string, onMessage: (msg: SyncMessage) => void) =>
@@ -511,14 +534,64 @@ export const useStore = create<AppState>((set, get) => ({
     const char = characters[characterName];
     if (!char) return;
     const vital = char.vitals[field];
-    const newCurrent = Math.max(0, Math.min(vital.max, vital.current + delta));
-    const updated: Character = {
+
+    // HP can go negative (death mechanics). Other vitals clamped at 0.
+    const newCurrent =
+      field === 'hp'
+        ? Math.min(vital.max, vital.current + delta)
+        : Math.max(0, Math.min(vital.max, vital.current + delta));
+
+    let updated: Character = {
       ...char,
       vitals: { ...char.vitals, [field]: { ...vital, current: newCurrent } },
     };
+
+    // ── Death state transitions (HP only) ───────────────────────────────────
+    let deathStateChanged = false;
+    if (field === 'hp') {
+      const prevState: DeathStatus = char.deathState ?? 'alive';
+      const threshold = deathThresholdFor(char.vitals.hp.max);
+      let nextState: DeathStatus = prevState;
+
+      if (newCurrent <= threshold) {
+        nextState = 'dead';
+      } else if (newCurrent <= 0 && (prevState === 'alive')) {
+        nextState = 'dying';
+      } else if (newCurrent <= 0 && prevState === 'stabilized') {
+        nextState = 'dying'; // took damage while stabilized
+      } else if (newCurrent > 0 && (prevState === 'dying' || prevState === 'stabilized')) {
+        nextState = 'alive'; // healed back to positive
+      }
+
+      if (nextState !== prevState) {
+        deathStateChanged = true;
+        let conditions = removeDeathConds(updated.conditions ?? []);
+        if (nextState === 'dying') {
+          conditions = addCondUnique(addCondUnique(conditions, 'Inconsciente'), 'Sangrando');
+        } else if (nextState === 'stabilized') {
+          conditions = addCondUnique(conditions, 'Inconsciente');
+        } else if (nextState === 'dead') {
+          conditions = addCondUnique(removeDeathConds(conditions), 'Morto');
+        }
+        // 'alive': conditions already cleaned above
+
+        updated = { ...updated, deathState: nextState, conditions };
+
+        if (nextState === 'dead' && campaign) {
+          broadcast(channel, { type: 'CHARACTER_DIED', payload: { campaignCode: campaign.code, characterName } });
+        }
+        // Send full character so all clients sync the death state
+        if (campaign) {
+          broadcast(channel, { type: 'SHEET_UPDATE', payload: { campaignCode: campaign.code, character: updated } });
+        }
+      }
+    }
+
     void saveCharacter(updated);
     set({ characters: { ...characters, [characterName]: updated } });
-    if (campaign) {
+
+    // For non-death transitions, use lightweight broadcast
+    if (campaign && !deathStateChanged) {
       broadcast(channel, { type: 'GM_VITAL_UPDATE', payload: { campaignCode: campaign.code, characterName, field, delta } });
     }
   },
@@ -537,6 +610,14 @@ export const useStore = create<AppState>((set, get) => ({
     const { characters, campaign, channel } = get();
     const char = characters[characterName];
     if (!char || !campaign) return;
+
+    // Block rest for dead/dying/stabilized characters
+    const ds: DeathStatus = char.deathState ?? 'alive';
+    if (ds !== 'alive') {
+      const label = ds === 'dead' ? 'Morto' : ds === 'dying' ? 'inconsciente e sangrando' : 'inconsciente';
+      get().addToast(`${char.name} não pode descansar — está ${label}.`, 'warning');
+      return;
+    }
 
     const gains =
       restType === 'long'
@@ -589,7 +670,18 @@ export const useStore = create<AppState>((set, get) => ({
       }
       case 'SHEET_UPDATE': {
         const char = msg.payload.character;
+        const prev = characters[char.name];
         set({ characters: { ...characters, [char.name]: char } });
+        // Notify player of death state transitions
+        if (role === 'player' && char.name === get().currentPlayerName) {
+          const prevState: DeathStatus = prev?.deathState ?? 'alive';
+          const nextState: DeathStatus = char.deathState ?? 'alive';
+          if (nextState === 'dying' && prevState === 'alive') {
+            addToast('Você caiu inconsciente e está sangrando! Faça um teste de Constituição CD 15.', 'damage');
+          } else if (nextState === 'stabilized' && prevState === 'dying') {
+            addToast('Você estabilizou — continua inconsciente, mas não está mais sangrando.', 'info');
+          }
+        }
         break;
       }
       case 'GM_VITAL_UPDATE': {
@@ -598,7 +690,11 @@ export const useStore = create<AppState>((set, get) => ({
         const char = characters[characterName];
         if (!char) break;
         const vital = char.vitals[field];
-        const newCurrent = Math.max(0, Math.min(vital.max, vital.current + delta));
+        // HP can go negative (death); other vitals clamped at 0
+        const newCurrent =
+          field === 'hp'
+            ? Math.min(vital.max, vital.current + delta)
+            : Math.max(0, Math.min(vital.max, vital.current + delta));
         const updated = { ...char, vitals: { ...char.vitals, [field]: { ...vital, current: newCurrent } } };
         set({ characters: { ...characters, [characterName]: updated } });
         const label = field === 'hp' ? 'PV' : field === 'mana' ? 'Mana' : 'Sanidade';
@@ -702,6 +798,48 @@ export const useStore = create<AppState>((set, get) => ({
       case 'CAMPAIGN_DELETED': {
         addToast('A campanha foi encerrada pelo mestre.', 'warning');
         get().leaveCampaign();
+        break;
+      }
+      case 'CHARACTER_DIED': {
+        const { characterName } = msg.payload;
+        if (role === 'gm') addToast(`${characterName} morreu!`, 'damage');
+        break;
+      }
+      case 'DEATH_SAVE_ROLLED': {
+        const { characterName, total, success } = msg.payload;
+        if (role === 'gm') {
+          addToast(
+            `${characterName}: teste de CON ${total} — ${success ? '✓ Estabilizou' : `✗ Falhou (${total})`}`,
+            success ? 'info' : 'damage',
+          );
+        }
+        break;
+      }
+      case 'PLAYER_REPLACED_CHARACTER': {
+        if (role !== 'gm') break;
+        const { oldName, newCharacter } = msg.payload;
+        const newChars = { ...characters };
+        delete newChars[oldName];
+        newChars[newCharacter.name] = newCharacter;
+        const replacedCampaign: Campaign = {
+          ...campaign,
+          playerNames: [...campaign.playerNames.filter((n) => n !== oldName), newCharacter.name],
+        };
+        set({ characters: newChars, campaign: replacedCampaign });
+        addToast(`${oldName} morreu. ${newCharacter.name} está criando um novo personagem.`, 'info');
+        break;
+      }
+      case 'PLAYER_ABANDONED': {
+        if (role !== 'gm') break;
+        const { characterName } = msg.payload;
+        const newChars2 = { ...characters };
+        delete newChars2[characterName];
+        const abandonedCampaign: Campaign = {
+          ...campaign,
+          playerNames: campaign.playerNames.filter((n) => n !== characterName),
+        };
+        set({ characters: newChars2, campaign: abandonedCampaign });
+        addToast(`${characterName} abandonou a campanha.`, 'warning');
         break;
       }
     }
@@ -1058,5 +1196,134 @@ export const useStore = create<AppState>((set, get) => ({
     if (!char) return;
     const updated: Character = { ...char, ...patch, pendingLevelUp: false };
     get().updateCharacter(name, updated);
+  },
+
+  // ── Death system ──────────────────────────────────────────────────────────
+
+  rollDeathSave: (characterName: string) => {
+    const { characters, campaign, channel } = get();
+    const char = characters[characterName];
+    if (!char || (char.deathState ?? 'alive') !== 'dying') return;
+
+    // d20 + CON modifier + ⌊level / 2⌋ vs CD 15
+    const conMod = Math.floor((char.attributes.constitution - 10) / 2);
+    const levelBonus = Math.floor(char.level / 2);
+    const d20Roll = rollDie(20);
+    const total = d20Roll + conMod + levelBonus;
+    const success = total >= 15;
+
+    const rollerName = get().role === 'gm' ? 'Mestre' : characterName;
+    const bonusStr = conMod + levelBonus >= 0 ? `+${conMod + levelBonus}` : `${conMod + levelBonus}`;
+    const entry: DiceRollEntry = {
+      id: genId(),
+      rollerName,
+      label: `Teste de Constituição — Morte (${char.name})`,
+      diceExpr: `1d20${bonusStr}`,
+      breakdown: `${d20Roll}${bonusStr} = ${total}`,
+      total,
+      diceSum: d20Roll,
+      diceMax: 20,
+      timestamp: Date.now(),
+    };
+    set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
+
+    if (campaign) {
+      broadcast(channel, { type: 'DICE_ROLL', payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total, diceSum: entry.diceSum, diceMax: entry.diceMax } });
+      broadcast(channel, { type: 'DEATH_SAVE_ROLLED', payload: { campaignCode: campaign.code, characterName, roll: d20Roll, total, success } });
+    }
+
+    if (success) {
+      get().forceStabilize(characterName);
+      get().addToast(`${char.name} estabilizou! (${total} ≥ 15)`, 'success');
+    } else {
+      const dmg = rollDie(6);
+      get().addToast(`${char.name} falhou no teste (${total} < 15) — perde ${dmg} PV!`, 'damage');
+      get().updateVital(characterName, 'hp', -dmg);
+    }
+  },
+
+  forceStabilize: (characterName: string) => {
+    const { characters } = get();
+    const char = characters[characterName];
+    if (!char) return;
+    const conditions = addCondUnique(removeDeathConds(char.conditions ?? []), 'Inconsciente');
+    get().updateCharacter(characterName, { deathState: 'stabilized', conditions });
+  },
+
+  revive: (characterName: string, hp = 1) => {
+    const { characters } = get();
+    const char = characters[characterName];
+    if (!char) return;
+    const safeHp = Math.max(1, hp);
+    const conditions = removeDeathConds(char.conditions ?? []);
+    get().updateCharacter(characterName, {
+      deathState: 'alive',
+      conditions,
+      vitals: {
+        ...char.vitals,
+        hp: { ...char.vitals.hp, current: safeHp },
+      },
+    });
+    get().addToast(`${char.name} foi ressuscitado com ${safeHp} PV.`, 'heal');
+  },
+
+  replaceDeadCharacter: async (newName: string) => {
+    const { user, campaign, characters, currentPlayerName, channel } = get();
+    if (!user || !campaign || !currentPlayerName) return 'error';
+    const oldName = currentPlayerName;
+
+    // Check name uniqueness in this campaign
+    const { data: existing } = await supabase
+      .from('characters')
+      .select('name')
+      .eq('campaign_code', campaign.code)
+      .eq('name', newName)
+      .maybeSingle();
+    if (existing) return 'name_taken';
+
+    // Delete old character (DB trigger updates playerNames)
+    await supabase.from('characters').delete().eq('campaign_code', campaign.code).eq('name', oldName);
+
+    // Create fresh default character
+    const newChar = createDefaultCharacter(campaign.code, newName, user.id);
+    await saveCharacter(newChar);
+
+    // Update local state
+    const newChars = { ...characters };
+    delete newChars[oldName];
+    newChars[newName] = newChar;
+    const updatedCampaign: Campaign = {
+      ...campaign,
+      playerNames: [...campaign.playerNames.filter((n) => n !== oldName), newName],
+    };
+    set({ characters: newChars, currentPlayerName: newName, campaign: updatedCampaign });
+
+    broadcast(channel, {
+      type: 'PLAYER_REPLACED_CHARACTER',
+      payload: { campaignCode: campaign.code, oldName, newCharacter: newChar },
+    });
+
+    return 'ok';
+  },
+
+  abandonAfterDeath: async () => {
+    const { user, campaign, currentPlayerName, channel } = get();
+    if (!user || !campaign || !currentPlayerName) return;
+    const characterName = currentPlayerName;
+
+    // Broadcast first so GM is notified before the data disappears
+    broadcast(channel, { type: 'PLAYER_ABANDONED', payload: { campaignCode: campaign.code, characterName } });
+
+    // Remove character from DB (trigger updates playerNames)
+    await supabase.from('characters').delete()
+      .eq('campaign_code', campaign.code)
+      .eq('name', characterName);
+
+    // Remove campaign membership so they can rejoin as a new player later
+    await supabase.from('campaign_members').delete()
+      .eq('campaign_code', campaign.code)
+      .eq('user_id', user.id);
+
+    get().leaveCampaign();
   },
 }));
