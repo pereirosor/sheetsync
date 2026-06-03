@@ -4,6 +4,7 @@ import ProgressBar from '../../ui/ProgressBar';
 import DiceRoller from '../DiceRoller';
 import CharacteristicsTab from './tabs/CharacteristicsTab';
 import SkillsTab from './tabs/SkillsTab';
+import DeathModal from '../DeathModal';
 
 type TabId = 'characteristics' | 'skills' | 'notes';
 
@@ -21,10 +22,15 @@ export default function CoCSheet() {
   const char              = useStore((s) =>
     s.currentPlayerName ? s.characters[s.currentPlayerName] : null,
   );
-  const leaveCampaign     = useStore((s) => s.leaveCampaign);
-  const updateCharacter   = useStore((s) => s.updateCharacter);
+  const leaveCampaign        = useStore((s) => s.leaveCampaign);
+  const updateCharacter      = useStore((s) => s.updateCharacter);
+  const rollCoCDeathCheck    = useStore((s) => s.rollCoCDeathCheck);
 
   if (!currentPlayerName || !char || !campaign) return null;
+
+  const deathState = char.deathState ?? 'alive';
+  const isDying    = deathState === 'dying';
+  const isDead     = deathState === 'dead';
 
   const era      = campaign.settings.cocEra ?? '1920s';
   const eraLabel = era === 'modern' ? 'Era Moderna' : 'Anos 1920';
@@ -35,6 +41,8 @@ export default function CoCSheet() {
   };
 
   return (
+    <>
+    {isDead && <DeathModal character={char} />}
     <div className="sheet-root">
       {/* Header */}
       <div className="page-header">
@@ -71,6 +79,51 @@ export default function CoCSheet() {
               {char.class || 'Investigador'}
             </p>
           </div>
+
+          {/* Death / insanity state banner */}
+          {(isDying || deathState === 'stabilized' || isDead || char.temporaryInsanity || char.indefiniteInsanity || char.majorWound) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+              {(isDying || deathState === 'stabilized' || isDead) && (
+                <div style={{
+                  padding: '8px 10px', borderRadius: 6, textAlign: 'center',
+                  background: isDead ? 'rgba(224,82,82,.15)' : 'rgba(224,82,82,.08)',
+                  border: `1px solid ${isDead ? 'var(--danger)' : 'rgba(224,82,82,.4)'}`,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: isDying ? 4 : 0 }}>
+                    {isDead ? '💀 MORTO' : deathState === 'stabilized' ? '😴 Inconsciente (Estável)' : `🩸 HP 0 — Morrendo`}
+                  </div>
+                  {isDying && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, marginTop: 2 }}
+                      onClick={() => rollCoCDeathCheck(currentPlayerName)}
+                      title="d100 ≤ CON para sobreviver"
+                    >
+                      🎲 Check de CON (d100 ≤ {char.attributes.constitution})
+                    </button>
+                  )}
+                </div>
+              )}
+              {char.majorWound && (
+                <div style={{
+                  padding: '5px 10px', borderRadius: 6, textAlign: 'center', fontSize: 11,
+                  background: 'rgba(224,82,82,.08)', border: '1px solid rgba(224,82,82,.3)',
+                  color: 'var(--danger)',
+                }}>
+                  🩹 Ferimento Grave
+                </div>
+              )}
+              {(char.temporaryInsanity || char.indefiniteInsanity) && (
+                <div style={{
+                  padding: '5px 10px', borderRadius: 6, textAlign: 'center', fontSize: 11,
+                  background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.3)',
+                  color: '#c084fc',
+                }}>
+                  🌀 {char.indefiniteInsanity ? 'Insanidade Indefinida' : 'Insanidade Temporária'}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Vitals */}
           <div className="vitals-stack">
@@ -158,5 +211,6 @@ export default function CoCSheet() {
         </aside>
       </div>
     </div>
+    </>
   );
 }

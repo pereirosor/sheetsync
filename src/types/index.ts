@@ -191,6 +191,11 @@ export interface Character {
   cocSkills?: Record<string, number>;
   // CoC 7e — occupation chosen during creation
   cocOccupation?: string;
+  // CoC 7e — combat/health flags
+  majorWound?: boolean;       // single hit ≥ max HP/2
+  firstAidUsed?: boolean;     // First Aid already applied since last major wound
+  temporaryInsanity?: boolean;
+  indefiniteInsanity?: boolean;
 }
 
 export interface CampaignSettings {

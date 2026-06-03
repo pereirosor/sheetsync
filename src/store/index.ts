@@ -19,6 +19,7 @@ import type {
   VitalKey,
 } from '../types';
 import tormenta20 from '../systems/tormenta20';
+import { getSystem } from '../systems';
 import { supabase } from '../lib/supabase';
 
 const generateCode = (): string => {
@@ -271,6 +272,8 @@ interface AppState {
 
   // Death system
   rollDeathSave: (characterName: string) => void;
+  rollCoCDeathCheck: (characterName: string) => void;
+  applySanityLoss: (characterName: string, amount: number) => void;
   forceStabilize: (characterName: string) => void;
   revive: (characterName: string, hp?: number) => void;
   replaceDeadCharacter: (newName: string) => Promise<'ok' | 'name_taken' | 'error'>;
@@ -626,10 +629,11 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
 
+    const system = getSystem(campaign.gameSystemId ?? 'tormenta20');
     const gains =
       restType === 'long'
-        ? tormenta20.longRestFormula(char, campaign)
-        : tormenta20.shortRestFormula(char, campaign);
+        ? system.longRestFormula(char, campaign)
+        : system.shortRestFormula(char, campaign);
 
     const newVitals = { ...char.vitals };
     for (const [k, v] of Object.entries(gains) as [VitalKey, number][]) {
@@ -1249,6 +1253,70 @@ export const useStore = create<AppState>((set, get) => ({
       get().addToast(`${char.name} falhou no teste (${total} < 15) — perde ${dmg} PV!`, 'damage');
       get().updateVital(characterName, 'hp', -dmg);
     }
+  },
+
+  rollCoCDeathCheck: (characterName: string) => {
+    const { characters, campaign, channel } = get();
+    const char = characters[characterName];
+    if (!char || (char.deathState ?? 'alive') !== 'dying') return;
+
+    const con = char.attributes.constitution;
+    const roll = rollDie(100);
+    const success = roll <= con;
+    const rollerName = get().role === 'gm' ? 'Mestre' : characterName;
+
+    const entry: DiceRollEntry = {
+      id: genId(),
+      rollerName,
+      label: `Check de Constituição — Morte CoC (${char.name})`,
+      diceExpr: '1d100',
+      breakdown: `${roll} vs CON ${con} — ${success ? 'Sobreviveu' : 'Morreu'}`,
+      total: roll,
+      diceSum: roll,
+      diceMax: 100,
+      timestamp: Date.now(),
+    };
+    set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
+    if (campaign) {
+      broadcast(channel, { type: 'DICE_ROLL', payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total, diceSum: entry.diceSum, diceMax: entry.diceMax } });
+    }
+
+    if (success) {
+      get().forceStabilize(characterName);
+      get().addToast(`${char.name} sobreviveu! (${roll} ≤ ${con})`, 'success');
+    } else {
+      get().addToast(`${char.name} morreu. (${roll} > ${con})`, 'damage');
+      get().updateCharacter(characterName, { deathState: 'dead', conditions: addCondUnique(removeDeathConds(char.conditions ?? []), 'Morto') });
+      if (campaign) broadcast(channel, { type: 'CHARACTER_DIED', payload: { campaignCode: campaign.code, characterName } });
+    }
+  },
+
+  applySanityLoss: (characterName: string, amount: number) => {
+    const { characters } = get();
+    const char = characters[characterName];
+    if (!char || amount <= 0) return;
+
+    const sanVital = char.vitals.sanity;
+    const newCurrent = Math.max(0, sanVital.current - amount);
+
+    const tempInsanity = amount >= 5;
+    // Indefinite insanity: SAN reaches 0, or lost ≥ 1/5 of starting SAN (max) in a session
+    const indef = newCurrent <= 0;
+
+    const patch: Partial<Character> = {
+      vitals: { ...char.vitals, sanity: { ...sanVital, current: newCurrent } },
+    };
+    if (tempInsanity) patch.temporaryInsanity = true;
+    if (indef) patch.indefiniteInsanity = true;
+
+    get().updateCharacter(characterName, patch);
+
+    const label = indef
+      ? `${char.name} sofreu insanidade indefinida! (SAN ${sanVital.current} → ${newCurrent})`
+      : tempInsanity
+        ? `${char.name} sofreu insanidade temporária! (SAN −${amount})`
+        : `${char.name}: SAN −${amount} (${sanVital.current} → ${newCurrent})`;
+    get().addToast(label, indef || tempInsanity ? 'damage' : 'info');
   },
 
   forceStabilize: (characterName: string) => {
