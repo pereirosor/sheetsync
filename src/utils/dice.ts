@@ -87,7 +87,7 @@ export function evalDiceExpr(expr: string, char: Character): RollResult {
       return sNorm === normalized || idNorm === normalized;
     });
     if (skillDef) {
-      const attrVal = char.attributes[skillDef.attribute];
+      const attrVal = (char.attributes as unknown as Record<string, number>)[skillDef.attribute] ?? 10;
       const trained = char.skills[skillDef.id] ?? false;
       const mod = skillTotal(attrVal, trained, char.level);
       total += mod;

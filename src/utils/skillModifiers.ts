@@ -17,7 +17,7 @@ export function getSkillBreakdown(
   skill: SkillDef,
   raceInfo?: RaceInfo,
 ): SkillBreakdown {
-  const attrVal = char.attributes[skill.attribute];
+  const attrVal = (char.attributes as unknown as Record<string, number>)[skill.attribute] ?? 10;
   const trained = char.skills[skill.id] ?? false;
   const base = skillTotal(attrVal, trained, char.level);
 

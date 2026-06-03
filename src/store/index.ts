@@ -52,6 +52,7 @@ async function saveCampaign(c: Campaign): Promise<void> {
     owner_id: c.ownerId,
     created_at: c.createdAt,
     settings: c.settings,
+    game_system: c.gameSystemId,
     // player_names and gm_character_names are managed by DB trigger
   });
 }
@@ -71,6 +72,7 @@ async function loadCampaign(code: string): Promise<Campaign | null> {
     settings: data.settings as CampaignSettings,
     playerNames: (data.player_names as string[]) ?? [],
     gmCharacterNames: (data.gm_character_names as string[]) ?? [],
+    gameSystemId: (data.game_system as string | undefined) ?? 'tormenta20',
   };
 }
 
@@ -168,6 +170,10 @@ export const createDefaultCharacter = (campaignCode: string, name: string, userI
     intelligence: 10,
     wisdom: 10,
     charisma: 10,
+    size: 0,
+    power: 0,
+    appearance: 0,
+    education: 0,
   },
   skills: Object.fromEntries(tormenta20.skillList.map((s) => [s.id, false])),
   equipment: [],
@@ -214,7 +220,7 @@ interface AppState {
 
   // Campaign lifecycle
   initChannel: (campaignCode: string) => void;
-  createCampaign: () => Promise<void>;
+  createCampaign: (systemId: string, settings?: Partial<CampaignSettings>) => Promise<void>;
   openCampaign: (code: string) => Promise<void>;
   joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | 'already_gm' | string>;
   leaveCampaign: () => void;
@@ -385,7 +391,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ channel: ch });
   },
 
-  createCampaign: async () => {
+  createCampaign: async (systemId: string, extraSettings?: Partial<CampaignSettings>) => {
     const { user } = get();
     if (!user) return;
     const code = generateCode();
@@ -393,9 +399,10 @@ export const useStore = create<AppState>((set, get) => ({
       code,
       ownerId: user.id,
       createdAt: Date.now(),
-      settings: { sanityEnabled: false, speedUnit: 'squares' },
+      settings: { sanityEnabled: false, speedUnit: 'squares', ...extraSettings },
       playerNames: [],
       gmCharacterNames: [],
+      gameSystemId: systemId,
     };
     await saveCampaign(campaign);
     await supabase.from('campaign_members').insert({ campaign_code: code, user_id: user.id, role: 'gm' });
@@ -893,6 +900,7 @@ export const useStore = create<AppState>((set, get) => ({
         intelligence: data.intelligence,
         wisdom: data.wisdom,
         charisma: data.charisma,
+        size: 0, power: 0, appearance: 0, education: 0,
       },
       skills: Object.fromEntries(tormenta20.skillList.map((s) => [s.id, false])),
       equipment: [],
@@ -951,6 +959,7 @@ export const useStore = create<AppState>((set, get) => ({
         intelligence: data.intelligence,
         wisdom: data.wisdom,
         charisma: data.charisma,
+        size: 0, power: 0, appearance: 0, education: 0,
       },
       actions: data.actions,
       items: data.items,

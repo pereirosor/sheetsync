@@ -5,6 +5,7 @@ import type { WizardState } from '../wizardState';
 const ATTR_LABELS: Record<AttributeKey, string> = {
   strength: 'Força', dexterity: 'Destreza', constitution: 'Constituição',
   intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma',
+  size: 'Tamanho', power: 'Poder', appearance: 'Aparência', education: 'Educação',
 };
 const ALL_ATTRS: AttributeKey[] = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 

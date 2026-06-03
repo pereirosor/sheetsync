@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import SystemSelectorModal from './SystemSelectorModal';
+import type { CampaignSettings } from '../types';
 
 export default function Dashboard() {
   const user = useStore((s) => s.user);
@@ -16,10 +18,16 @@ export default function Dashboard() {
   const [opening, setOpening] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [showSystemSelector, setShowSystemSelector] = useState(false);
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
+    setShowSystemSelector(true);
+  };
+
+  const handleSystemConfirm = async (systemId: string, extraSettings?: Partial<CampaignSettings>) => {
+    setShowSystemSelector(false);
     setCreating(true);
-    await createCampaign();
+    await createCampaign(systemId, extraSettings);
     setCreating(false);
   };
 
@@ -47,6 +55,13 @@ export default function Dashboard() {
   };
 
   return (
+    <>
+    {showSystemSelector && (
+      <SystemSelectorModal
+        onConfirm={handleSystemConfirm}
+        onCancel={() => setShowSystemSelector(false)}
+      />
+    )}
     <div className="home-wrap">
       <div className="home-card" style={{ maxWidth: 480 }}>
         {/* Header */}
@@ -172,5 +187,6 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+    </>
   );
 }
