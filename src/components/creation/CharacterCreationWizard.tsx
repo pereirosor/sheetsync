@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
 import tormenta20, { calcMod2 } from '../../systems/tormenta20';
+import CoCCreationWizard from './coc/CoCCreationWizard';
 import { resolveSkillId } from '../../utils/resolveSkillId';
 import type { AttributeKey, Character, EquipmentItem, SpellItem } from '../../types';
 import WizardProgress from './WizardProgress';
@@ -253,6 +254,8 @@ export default function CharacterCreationWizard() {
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const campaign = useStore((s) => s.campaign);
   const addToast = useStore((s) => s.addToast);
+
+  if (campaign?.gameSystemId === 'coc7e') return <CoCCreationWizard />;
 
   const [wizState, setWizState] = useState<WizardState>(initialWizardState);
   const [stepIdx, setStepIdx] = useState(0);

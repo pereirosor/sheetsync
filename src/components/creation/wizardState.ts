@@ -30,7 +30,7 @@ export const initialWizardState: WizardState = {
   origin: '',
   originBenefits: [],
   attributeMethod: 'point-buy',
-  attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
+  attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 },
   rolledPool: [],
   rolledAssignments: {},
   rollAttempts: 0,

@@ -10,7 +10,8 @@ create table campaigns (
   created_at         bigint not null,
   settings           jsonb  not null default '{}',
   player_names       text[] not null default '{}',
-  gm_character_names text[] not null default '{}'
+  gm_character_names text[] not null default '{}',
+  game_system        text   not null default 'tormenta20'
 );
 
 create table campaign_members (

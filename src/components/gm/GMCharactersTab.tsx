@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../../store';
 import type { Character, GMCharacterFormData } from '../../types';
 import CreateNPCModal from './CreateNPCModal';
+import CreateNPCModalCoC from './coc/CreateNPCModalCoC';
 import { evalDiceExpr } from '../../utils/dice';
 
 type EditTarget = GMCharacterFormData & { originalName: string };
@@ -45,7 +46,9 @@ export default function GMCharactersTab() {
   const campaign = useStore((s) => s.campaign);
   const characters = useStore((s) => s.characters);
   const createGMCharacter = useStore((s) => s.createGMCharacter);
+  const createGMCharacterCoC = useStore((s) => s.createGMCharacterCoC);
   const updateGMCharacter = useStore((s) => s.updateGMCharacter);
+  const isCoC = campaign?.gameSystemId === 'coc7e';
   const deleteGMCharacter = useStore((s) => s.deleteGMCharacter);
   const toggleNPCInScene = useStore((s) => s.toggleNPCInScene);
   const rollDice = useStore((s) => s.rollDice);
@@ -212,42 +215,84 @@ export default function GMCharactersTab() {
                     {char.vitals.hp.current}/{char.vitals.hp.max}
                   </strong>
                 </span>
-                {char.vitals.mana.max > 0 && (
+                {isCoC ? (
                   <span>
-                    Mana:{' '}
-                    <strong style={{ color: 'var(--mana)' }}>
-                      {char.vitals.mana.current}/{char.vitals.mana.max}
+                    SAN:{' '}
+                    <strong style={{ color: 'var(--sanity)' }}>
+                      {char.vitals.sanity.current}/{char.vitals.sanity.max}
                     </strong>
+                  </span>
+                ) : (
+                  char.vitals.mana.max > 0 && (
+                    <span>
+                      Mana:{' '}
+                      <strong style={{ color: 'var(--mana)' }}>
+                        {char.vitals.mana.current}/{char.vitals.mana.max}
+                      </strong>
+                    </span>
+                  )
+                )}
+                {!isCoC && (
+                  <span>
+                    CA: <strong style={{ color: 'var(--gold)' }}>{char.vitals.ac}</strong>
                   </span>
                 )}
                 <span>
-                  CA: <strong style={{ color: 'var(--gold)' }}>{char.vitals.ac}</strong>
-                </span>
-                <span>
-                  Desl.: <strong>{char.speed}q</strong>
+                  MOV: <strong>{char.speed}</strong>
                 </span>
               </div>
 
               {/* Attributes */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {ATTR_ABBR.map(({ key, abbr }) => {
-                  const val = char.attributes[key];
-                  const bonus = attrBonus(val);
-                  return (
-                    <div key={key} style={{ textAlign: 'center', minWidth: 38 }}>
-                      <div style={{ fontSize: 9, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                        {abbr}
+              {isCoC ? (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {([
+                    { key: 'strength', abbr: 'FOR' }, { key: 'constitution', abbr: 'CON' },
+                    { key: 'size', abbr: 'TAM' }, { key: 'dexterity', abbr: 'DES' },
+                    { key: 'intelligence', abbr: 'INT' }, { key: 'power', abbr: 'POD' },
+                  ] as { key: keyof Character['attributes']; abbr: string }[]).map(({ key, abbr }) => {
+                    const val = char.attributes[key];
+                    return (
+                      <div key={key} style={{ textAlign: 'center', minWidth: 38 }}>
+                        <div style={{ fontSize: 9, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{abbr}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>{val}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text2)' }}>½{Math.floor(val / 2)}</div>
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>
-                        {val}
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {ATTR_ABBR.map(({ key, abbr }) => {
+                    const val = char.attributes[key];
+                    const bonus = attrBonus(val);
+                    return (
+                      <div key={key} style={{ textAlign: 'center', minWidth: 38 }}>
+                        <div style={{ fontSize: 9, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                          {abbr}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.2 }}>
+                          {val}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }}>
+                          {bonus}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }}>
-                        {bonus}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Skills (CoC) */}
+              {isCoC && char.notes && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 3 }}>
+                    Perícias
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text1)', whiteSpace: 'pre-wrap', margin: 0 }}>
+                    {char.notes}
+                  </p>
+                </div>
+              )}
 
               {/* Actions */}
               {char.actions && (
@@ -261,8 +306,8 @@ export default function GMCharactersTab() {
                 </div>
               )}
 
-              {/* Items */}
-              {char.items && (
+              {/* Items (T20 only) */}
+              {!isCoC && char.items && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 10, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 3 }}>
                     Itens Carregados
@@ -313,12 +358,19 @@ export default function GMCharactersTab() {
 
       {/* Modals */}
       {showCreateModal && (
-        <CreateNPCModal
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={(data) => createGMCharacter(data)}
-        />
+        isCoC ? (
+          <CreateNPCModalCoC
+            onClose={() => setShowCreateModal(false)}
+            onSubmit={(data) => createGMCharacterCoC(data)}
+          />
+        ) : (
+          <CreateNPCModal
+            onClose={() => setShowCreateModal(false)}
+            onSubmit={(data) => createGMCharacter(data)}
+          />
+        )
       )}
-      {editTarget && (
+      {!isCoC && editTarget && (
         <CreateNPCModal
           initialValues={editTarget}
           onClose={() => setEditTarget(null)}

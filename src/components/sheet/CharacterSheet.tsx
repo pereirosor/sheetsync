@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
+import CoCSheet from './coc/CoCSheet';
 import { calcMod2 } from '../../systems/tormenta20';
 import { CONDITION_MAP } from '../../data/conditions';
 import ProgressBar from '../ui/ProgressBar';
@@ -33,6 +34,8 @@ export default function CharacterSheet() {
 
   const currentPlayerName = useStore((s) => s.currentPlayerName);
   const campaign = useStore((s) => s.campaign);
+
+  if (campaign?.gameSystemId === 'coc7e') return <CoCSheet />;
   const char = useStore((s) =>
     s.currentPlayerName ? s.characters[s.currentPlayerName] : null,
   );
@@ -64,6 +67,8 @@ export default function CharacterSheet() {
         <div>
           <p style={{ fontSize: 11, color: 'var(--text2)' }}>
             Campanha <strong style={{ color: 'var(--text)' }}>{campaign.code}</strong>
+            {' · '}
+            <span style={{ color: 'var(--text2)' }}>Tormenta 20</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

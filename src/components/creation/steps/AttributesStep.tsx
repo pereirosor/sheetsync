@@ -6,6 +6,7 @@ import type { WizardState } from '../wizardState';
 const ATTR_LABELS: Record<AttributeKey, string> = {
   strength: 'Força', dexterity: 'Destreza', constitution: 'Constituição',
   intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma',
+  size: 'Tamanho', power: 'Poder', appearance: 'Aparência', education: 'Educação',
 };
 const ALL_ATTRS: AttributeKey[] = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 const POINT_BUY_COST: Record<number, number> = { '-1': -1, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4 };
@@ -67,7 +68,7 @@ export default function AttributesStep({ state, update }: Props) {
     setPendingPool(newPool);
     update({
       rolledPool: newPool, rolledAssignments: {},
-      attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
+      attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 },
       rollAttempts: state.rollAttempts + 1,
     });
   };
@@ -96,7 +97,7 @@ export default function AttributesStep({ state, update }: Props) {
     const oldIdx = Object.entries(prev).find(([, v]) => v === poolIdx)?.[0] as AttributeKey | undefined;
     if (oldIdx) delete prev[oldIdx];
     prev[attr] = poolIdx;
-    const newBases: Record<AttributeKey, number> = { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 };
+    const newBases: Record<AttributeKey, number> = { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 };
     for (const [a, idx] of Object.entries(prev) as [AttributeKey, number][]) {
       newBases[a] = (pool[idx] ?? 10) - 10;
     }
@@ -111,7 +112,7 @@ export default function AttributesStep({ state, update }: Props) {
             key={m}
             className={`btn ${state.attributeMethod === m ? 'btn-gold' : 'btn-secondary'}`}
             style={{ flex: 1, fontSize: 13 }}
-            onClick={() => update({ attributeMethod: m, attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, rolledPool: [], rolledAssignments: {} })}
+            onClick={() => update({ attributeMethod: m, attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 }, rolledPool: [], rolledAssignments: {} })}
           >
             {m === 'point-buy' ? 'Compra de Pontos' : 'Rolar 4d6'}
           </button>

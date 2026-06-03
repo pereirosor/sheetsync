@@ -4,7 +4,12 @@ export type AttributeKey =
   | 'constitution'
   | 'intelligence'
   | 'wisdom'
-  | 'charisma';
+  | 'charisma'
+  // CoC 7e extras (TAM, POD, APA, EDU)
+  | 'size'
+  | 'power'
+  | 'appearance'
+  | 'education';
 
 export type VitalKey = 'hp' | 'mana' | 'sanity';
 
@@ -33,6 +38,11 @@ export interface CharacterAttributes {
   intelligence: number;
   wisdom: number;
   charisma: number;
+  // CoC 7e extras (default 0 for T20 characters)
+  size: number;
+  power: number;
+  appearance: number;
+  education: number;
 }
 
 export interface SpellAmplification {
@@ -177,11 +187,21 @@ export interface Character {
   pendingLevelUp?: boolean;
   activeModifiers?: CharacterModifier[];
   deathState?: DeathStatus;
+  // CoC 7e — percentile skill values (e.g. { 'lutar-briga': 55, 'ocultismo': 30 })
+  cocSkills?: Record<string, number>;
+  // CoC 7e — occupation chosen during creation
+  cocOccupation?: string;
+  // CoC 7e — combat/health flags
+  majorWound?: boolean;       // single hit ≥ max HP/2
+  firstAidUsed?: boolean;     // First Aid already applied since last major wound
+  temporaryInsanity?: boolean;
+  indefiniteInsanity?: boolean;
 }
 
 export interface CampaignSettings {
   sanityEnabled: boolean;
   speedUnit: 'squares' | 'meters';
+  cocEra?: '1920s' | 'modern';
 }
 
 export interface Campaign {
@@ -191,6 +211,22 @@ export interface Campaign {
   settings: CampaignSettings;
   playerNames: string[];
   gmCharacterNames: string[];
+  gameSystemId: string;
+}
+
+export interface GMCharacterFormDataCoC {
+  name: string;
+  npcType: 'NPC' | 'Monstro' | 'Criatura';
+  // CoC 8 characteristics (percentage values 5-95)
+  strength: number; constitution: number; size: number; dexterity: number;
+  appearance: number; intelligence: number; power: number; education: number;
+  // Derived (can be overridden)
+  hpMax: number;
+  sanMax: number;
+  speed: number;
+  // Key skills (free text, e.g. "Lutar (Briga) 50%, Pistola 40%")
+  skillsText: string;
+  actions: string;
 }
 
 export interface GMCharacterFormData {
@@ -279,6 +315,14 @@ export interface CasterProgression {
   circleAtLevel: Record<number, number>;
 }
 
+export interface OccupationInfo {
+  skillPointsFormula: string;
+  creditRating: [number, number];
+  occupationSkills: string[];
+  personalSkillChoices: number;
+  era: ('1920s' | 'modern' | 'any')[];
+}
+
 export interface GameSystem {
   systemId: string;
   name: string;
@@ -305,6 +349,10 @@ export interface GameSystem {
   classProgression: Record<string, string[][]>;
   casterProgression: Record<string, CasterProgression>;
   generalPowers: GeneralPower[];
+  // CoC-specific (optional — T20 omits these)
+  occupationList?: string[];
+  occupationData?: Record<string, OccupationInfo>;
+  skillBaseValues?: Record<string, number>;
 }
 
 export interface CombatantEntry {

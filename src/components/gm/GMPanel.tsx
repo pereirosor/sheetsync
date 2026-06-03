@@ -7,7 +7,9 @@ import GMChat from './GMChat';
 import GMNotesTab from './GMNotesTab';
 import CombatTracker from './CombatTracker';
 import CombatInitModal from './CombatInitModal';
+import CombatInitModalCoC from './coc/CombatInitModalCoC';
 import LevelUpStatusModal from './LevelUpStatusModal';
+import SanityLossModal from './SanityLossModal';
 
 type GMTab = 'scene' | 'characters' | 'notes';
 type RestType = 'short' | 'long';
@@ -27,6 +29,10 @@ export default function GMPanel() {
   const [activeTab, setActiveTab] = useState<GMTab>('scene');
   const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showSanityLoss, setShowSanityLoss] = useState(false);
+  const [showCoCCombatInit, setShowCoCCombatInit] = useState(false);
+
+  const isCoC = campaign?.gameSystemId === 'coc7e';
 
   if (!campaign) return null;
 
@@ -62,7 +68,9 @@ export default function GMPanel() {
   }
 
   const hasPendingLevelUp = playerNames.some((n) => characters[n]?.pendingLevelUp);
-  const restLabel = confirmRest === 'long' ? 'Descanso Longo' : 'Descanso Curto';
+  const restLabel = isCoC
+    ? confirmRest === 'long' ? 'Cura Natural' : 'Primeiros Socorros'
+    : confirmRest === 'long' ? 'Descanso Longo' : 'Descanso Curto';
   const sceneDesc =
     playerNames.length > 0 && inSceneNPCNames.length > 0
       ? `${playerNames.length} jogador${playerNames.length !== 1 ? 'es' : ''} e ${inSceneNPCNames.length} NPC${inSceneNPCNames.length !== 1 ? 's' : ''}`
@@ -85,6 +93,11 @@ export default function GMPanel() {
           >
             {campaign.code}
           </div>
+          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
+            {isCoC
+              ? `Call of Cthulhu · ${campaign.settings.cocEra === 'modern' ? 'Era Moderna' : 'Anos 1920'}`
+              : 'Tormenta 20'}
+          </span>
           <span style={{ fontSize: 11, color: 'var(--text2)' }}>
             {playerNames.length} jogador{playerNames.length !== 1 ? 'es' : ''}
             {gmCharacterNames.length > 0 &&
@@ -160,7 +173,7 @@ export default function GMPanel() {
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
-                    onClick={requestCombat}
+                    onClick={isCoC ? () => setShowCoCCombatInit(true) : requestCombat}
                   >
                     ⚔ Iniciar Combate
                   </button>
@@ -170,23 +183,34 @@ export default function GMPanel() {
                   style={{ fontSize: 11 }}
                   onClick={() => setConfirmRest('short')}
                 >
-                  ☽ Descanso Curto para Todos
+                  {isCoC ? '🩹 Primeiros Socorros' : '☽ Descanso Curto para Todos'}
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
                   onClick={() => setConfirmRest('long')}
                 >
-                  ☀ Descanso Longo para Todos
+                  {isCoC ? '🌿 Cura Natural' : '☀ Descanso Longo para Todos'}
                 </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
-                  onClick={() => setShowLevelUp(true)}
-                  title={hasPendingLevelUp ? 'Há jogadores com Level Up pendente' : 'Liberar Level Up para os jogadores'}
-                >
-                  ⬆ Level Up
-                </button>
+                {isCoC && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11, color: 'var(--sanity)', borderColor: 'rgba(130,90,180,.4)' }}
+                    onClick={() => setShowSanityLoss(true)}
+                  >
+                    🌀 Perda de Sanidade
+                  </button>
+                )}
+                {!isCoC && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
+                    onClick={() => setShowLevelUp(true)}
+                    title={hasPendingLevelUp ? 'Há jogadores com Level Up pendente' : 'Liberar Level Up para os jogadores'}
+                  >
+                    ⬆ Level Up
+                  </button>
+                )}
               </div>
             )}
 
@@ -245,8 +269,10 @@ export default function GMPanel() {
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
-      {combatPendingRolls !== null && <CombatInitModal />}
+      {!isCoC && combatPendingRolls !== null && <CombatInitModal />}
+      {showCoCCombatInit && <CombatInitModalCoC onClose={() => setShowCoCCombatInit(false)} />}
       {showLevelUp && <LevelUpStatusModal onClose={() => setShowLevelUp(false)} />}
+      {showSanityLoss && <SanityLossModal onClose={() => setShowSanityLoss(false)} />}
 
       {/* Confirm rest modal */}
       {confirmRest && (

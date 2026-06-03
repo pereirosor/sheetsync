@@ -12,6 +12,7 @@ import type {
   DeathStatus,
   DiceRollEntry,
   GMCharacterFormData,
+  GMCharacterFormDataCoC,
   GMNote,
   Role,
   SyncMessage,
@@ -19,6 +20,7 @@ import type {
   VitalKey,
 } from '../types';
 import tormenta20 from '../systems/tormenta20';
+import { getSystem } from '../systems';
 import { supabase } from '../lib/supabase';
 
 const generateCode = (): string => {
@@ -52,6 +54,7 @@ async function saveCampaign(c: Campaign): Promise<void> {
     owner_id: c.ownerId,
     created_at: c.createdAt,
     settings: c.settings,
+    game_system: c.gameSystemId,
     // player_names and gm_character_names are managed by DB trigger
   });
 }
@@ -71,6 +74,7 @@ async function loadCampaign(code: string): Promise<Campaign | null> {
     settings: data.settings as CampaignSettings,
     playerNames: (data.player_names as string[]) ?? [],
     gmCharacterNames: (data.gm_character_names as string[]) ?? [],
+    gameSystemId: (data.game_system as string | undefined) ?? 'tormenta20',
   };
 }
 
@@ -168,6 +172,10 @@ export const createDefaultCharacter = (campaignCode: string, name: string, userI
     intelligence: 10,
     wisdom: 10,
     charisma: 10,
+    size: 0,
+    power: 0,
+    appearance: 0,
+    education: 0,
   },
   skills: Object.fromEntries(tormenta20.skillList.map((s) => [s.id, false])),
   equipment: [],
@@ -214,7 +222,7 @@ interface AppState {
 
   // Campaign lifecycle
   initChannel: (campaignCode: string) => void;
-  createCampaign: () => Promise<void>;
+  createCampaign: (systemId: string, settings?: Partial<CampaignSettings>) => Promise<void>;
   openCampaign: (code: string) => Promise<void>;
   joinCampaign: (code: string, characterName: string) => Promise<'ok' | 'not_found' | 'name_taken' | 'already_gm' | string>;
   leaveCampaign: () => void;
@@ -233,6 +241,7 @@ interface AppState {
 
   // GM characters
   createGMCharacter: (data: GMCharacterFormData) => void;
+  createGMCharacterCoC: (data: GMCharacterFormDataCoC) => void;
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
   deleteCampaign: () => Promise<void>;
@@ -265,6 +274,8 @@ interface AppState {
 
   // Death system
   rollDeathSave: (characterName: string) => void;
+  rollCoCDeathCheck: (characterName: string) => void;
+  applySanityLoss: (characterName: string, amount: number) => void;
   forceStabilize: (characterName: string) => void;
   revive: (characterName: string, hp?: number) => void;
   replaceDeadCharacter: (newName: string) => Promise<'ok' | 'name_taken' | 'error'>;
@@ -385,7 +396,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ channel: ch });
   },
 
-  createCampaign: async () => {
+  createCampaign: async (systemId: string, extraSettings?: Partial<CampaignSettings>) => {
     const { user } = get();
     if (!user) return;
     const code = generateCode();
@@ -393,9 +404,10 @@ export const useStore = create<AppState>((set, get) => ({
       code,
       ownerId: user.id,
       createdAt: Date.now(),
-      settings: { sanityEnabled: false, speedUnit: 'squares' },
+      settings: { sanityEnabled: false, speedUnit: 'squares', ...extraSettings },
       playerNames: [],
       gmCharacterNames: [],
+      gameSystemId: systemId,
     };
     await saveCampaign(campaign);
     await supabase.from('campaign_members').insert({ campaign_code: code, user_id: user.id, role: 'gm' });
@@ -619,10 +631,11 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
 
+    const system = getSystem(campaign.gameSystemId ?? 'tormenta20');
     const gains =
       restType === 'long'
-        ? tormenta20.longRestFormula(char, campaign)
-        : tormenta20.shortRestFormula(char, campaign);
+        ? system.longRestFormula(char, campaign)
+        : system.shortRestFormula(char, campaign);
 
     const newVitals = { ...char.vitals };
     for (const [k, v] of Object.entries(gains) as [VitalKey, number][]) {
@@ -893,6 +906,7 @@ export const useStore = create<AppState>((set, get) => ({
         intelligence: data.intelligence,
         wisdom: data.wisdom,
         charisma: data.charisma,
+        size: 0, power: 0, appearance: 0, education: 0,
       },
       skills: Object.fromEntries(tormenta20.skillList.map((s) => [s.id, false])),
       equipment: [],
@@ -951,6 +965,7 @@ export const useStore = create<AppState>((set, get) => ({
         intelligence: data.intelligence,
         wisdom: data.wisdom,
         charisma: data.charisma,
+        size: 0, power: 0, appearance: 0, education: 0,
       },
       actions: data.actions,
       items: data.items,
@@ -963,6 +978,57 @@ export const useStore = create<AppState>((set, get) => ({
     if (data.name !== originalName) delete newChars[originalName];
     newChars[data.name] = updated;
     set({ campaign: updatedCampaign, characters: newChars });
+  },
+
+  createGMCharacterCoC: (data: GMCharacterFormDataCoC) => {
+    const { campaign, characters, user } = get();
+    if (!campaign || !user) return;
+    const allNames = [...campaign.playerNames, ...(campaign.gmCharacterNames ?? [])];
+    if (allNames.includes(data.name)) {
+      get().addToast(`Já existe um personagem com o nome "${data.name}".`, 'warning');
+      return;
+    }
+    const ch: Character = {
+      id: `${campaign.code}_gm_${data.name}`,
+      userId: user.id,
+      campaignCode: campaign.code,
+      name: data.name,
+      race: '',
+      class: data.npcType,
+      origin: data.npcType,
+      level: 1,
+      alignment: '',
+      deity: '',
+      size: 'Médio',
+      speed: data.speed,
+      vitals: {
+        hp: { current: data.hpMax, max: data.hpMax },
+        mana: { current: 0, max: 0 },
+        sanity: { current: data.sanMax, max: data.sanMax },
+        ac: 0,
+      },
+      attributes: {
+        strength: data.strength, dexterity: data.dexterity, constitution: data.constitution,
+        intelligence: data.intelligence, wisdom: 0, charisma: 0,
+        size: data.size, power: data.power, appearance: data.appearance, education: data.education,
+      },
+      skills: {},
+      equipment: [],
+      spells: [],
+      notes: data.skillsText,
+      originBenefits: [],
+      actions: data.actions,
+      owner: 'gm',
+      inScene: false,
+      avatarDataUrl: undefined,
+      created: true,
+    };
+    const updatedCampaign: Campaign = {
+      ...campaign,
+      gmCharacterNames: [...(campaign.gmCharacterNames ?? []), data.name],
+    };
+    void saveCharacter(ch);
+    set({ campaign: updatedCampaign, characters: { ...characters, [data.name]: ch } });
   },
 
   deleteGMCharacter: (name: string) => {
@@ -1240,6 +1306,70 @@ export const useStore = create<AppState>((set, get) => ({
       get().addToast(`${char.name} falhou no teste (${total} < 15) — perde ${dmg} PV!`, 'damage');
       get().updateVital(characterName, 'hp', -dmg);
     }
+  },
+
+  rollCoCDeathCheck: (characterName: string) => {
+    const { characters, campaign, channel } = get();
+    const char = characters[characterName];
+    if (!char || (char.deathState ?? 'alive') !== 'dying') return;
+
+    const con = char.attributes.constitution;
+    const roll = rollDie(100);
+    const success = roll <= con;
+    const rollerName = get().role === 'gm' ? 'Mestre' : characterName;
+
+    const entry: DiceRollEntry = {
+      id: genId(),
+      rollerName,
+      label: `Check de Constituição — Morte CoC (${char.name})`,
+      diceExpr: '1d100',
+      breakdown: `${roll} vs CON ${con} — ${success ? 'Sobreviveu' : 'Morreu'}`,
+      total: roll,
+      diceSum: roll,
+      diceMax: 100,
+      timestamp: Date.now(),
+    };
+    set((s) => ({ diceLog: [entry, ...s.diceLog].slice(0, 100) }));
+    if (campaign) {
+      broadcast(channel, { type: 'DICE_ROLL', payload: { campaignCode: campaign.code, rollerName: entry.rollerName, label: entry.label, diceExpr: entry.diceExpr, breakdown: entry.breakdown, total: entry.total, diceSum: entry.diceSum, diceMax: entry.diceMax } });
+    }
+
+    if (success) {
+      get().forceStabilize(characterName);
+      get().addToast(`${char.name} sobreviveu! (${roll} ≤ ${con})`, 'success');
+    } else {
+      get().addToast(`${char.name} morreu. (${roll} > ${con})`, 'damage');
+      get().updateCharacter(characterName, { deathState: 'dead', conditions: addCondUnique(removeDeathConds(char.conditions ?? []), 'Morto') });
+      if (campaign) broadcast(channel, { type: 'CHARACTER_DIED', payload: { campaignCode: campaign.code, characterName } });
+    }
+  },
+
+  applySanityLoss: (characterName: string, amount: number) => {
+    const { characters } = get();
+    const char = characters[characterName];
+    if (!char || amount <= 0) return;
+
+    const sanVital = char.vitals.sanity;
+    const newCurrent = Math.max(0, sanVital.current - amount);
+
+    const tempInsanity = amount >= 5;
+    // Indefinite insanity: SAN reaches 0, or lost ≥ 1/5 of starting SAN (max) in a session
+    const indef = newCurrent <= 0;
+
+    const patch: Partial<Character> = {
+      vitals: { ...char.vitals, sanity: { ...sanVital, current: newCurrent } },
+    };
+    if (tempInsanity) patch.temporaryInsanity = true;
+    if (indef) patch.indefiniteInsanity = true;
+
+    get().updateCharacter(characterName, patch);
+
+    const label = indef
+      ? `${char.name} sofreu insanidade indefinida! (SAN ${sanVital.current} → ${newCurrent})`
+      : tempInsanity
+        ? `${char.name} sofreu insanidade temporária! (SAN −${amount})`
+        : `${char.name}: SAN −${amount} (${sanVital.current} → ${newCurrent})`;
+    get().addToast(label, indef || tempInsanity ? 'damage' : 'info');
   },
 
   forceStabilize: (characterName: string) => {
