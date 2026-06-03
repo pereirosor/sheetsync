@@ -12,6 +12,7 @@ import type {
   DeathStatus,
   DiceRollEntry,
   GMCharacterFormData,
+  GMCharacterFormDataCoC,
   GMNote,
   Role,
   SyncMessage,
@@ -240,6 +241,7 @@ interface AppState {
 
   // GM characters
   createGMCharacter: (data: GMCharacterFormData) => void;
+  createGMCharacterCoC: (data: GMCharacterFormDataCoC) => void;
   updateGMCharacter: (originalName: string, data: GMCharacterFormData) => void;
   deleteGMCharacter: (name: string) => void;
   deleteCampaign: () => Promise<void>;
@@ -976,6 +978,57 @@ export const useStore = create<AppState>((set, get) => ({
     if (data.name !== originalName) delete newChars[originalName];
     newChars[data.name] = updated;
     set({ campaign: updatedCampaign, characters: newChars });
+  },
+
+  createGMCharacterCoC: (data: GMCharacterFormDataCoC) => {
+    const { campaign, characters, user } = get();
+    if (!campaign || !user) return;
+    const allNames = [...campaign.playerNames, ...(campaign.gmCharacterNames ?? [])];
+    if (allNames.includes(data.name)) {
+      get().addToast(`Já existe um personagem com o nome "${data.name}".`, 'warning');
+      return;
+    }
+    const ch: Character = {
+      id: `${campaign.code}_gm_${data.name}`,
+      userId: user.id,
+      campaignCode: campaign.code,
+      name: data.name,
+      race: '',
+      class: data.npcType,
+      origin: data.npcType,
+      level: 1,
+      alignment: '',
+      deity: '',
+      size: 'Médio',
+      speed: data.speed,
+      vitals: {
+        hp: { current: data.hpMax, max: data.hpMax },
+        mana: { current: 0, max: 0 },
+        sanity: { current: data.sanMax, max: data.sanMax },
+        ac: 0,
+      },
+      attributes: {
+        strength: data.strength, dexterity: data.dexterity, constitution: data.constitution,
+        intelligence: data.intelligence, wisdom: 0, charisma: 0,
+        size: data.size, power: data.power, appearance: data.appearance, education: data.education,
+      },
+      skills: {},
+      equipment: [],
+      spells: [],
+      notes: data.skillsText,
+      originBenefits: [],
+      actions: data.actions,
+      owner: 'gm',
+      inScene: false,
+      avatarDataUrl: undefined,
+      created: true,
+    };
+    const updatedCampaign: Campaign = {
+      ...campaign,
+      gmCharacterNames: [...(campaign.gmCharacterNames ?? []), data.name],
+    };
+    void saveCharacter(ch);
+    set({ campaign: updatedCampaign, characters: { ...characters, [data.name]: ch } });
   },
 
   deleteGMCharacter: (name: string) => {

@@ -214,6 +214,21 @@ export interface Campaign {
   gameSystemId: string;
 }
 
+export interface GMCharacterFormDataCoC {
+  name: string;
+  npcType: 'NPC' | 'Monstro' | 'Criatura';
+  // CoC 8 characteristics (percentage values 5-95)
+  strength: number; constitution: number; size: number; dexterity: number;
+  appearance: number; intelligence: number; power: number; education: number;
+  // Derived (can be overridden)
+  hpMax: number;
+  sanMax: number;
+  speed: number;
+  // Key skills (free text, e.g. "Lutar (Briga) 50%, Pistola 40%")
+  skillsText: string;
+  actions: string;
+}
+
 export interface GMCharacterFormData {
   name: string;
   npcType: 'NPC' | 'Monstro';

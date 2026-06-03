@@ -7,6 +7,7 @@ import GMChat from './GMChat';
 import GMNotesTab from './GMNotesTab';
 import CombatTracker from './CombatTracker';
 import CombatInitModal from './CombatInitModal';
+import CombatInitModalCoC from './coc/CombatInitModalCoC';
 import LevelUpStatusModal from './LevelUpStatusModal';
 import SanityLossModal from './SanityLossModal';
 
@@ -29,6 +30,7 @@ export default function GMPanel() {
   const [confirmRest, setConfirmRest] = useState<RestType | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showSanityLoss, setShowSanityLoss] = useState(false);
+  const [showCoCCombatInit, setShowCoCCombatInit] = useState(false);
 
   const isCoC = campaign?.gameSystemId === 'coc7e';
 
@@ -166,7 +168,7 @@ export default function GMPanel() {
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ fontSize: 11, color: 'var(--gold)', borderColor: 'rgba(201,168,76,.4)' }}
-                    onClick={requestCombat}
+                    onClick={isCoC ? () => setShowCoCCombatInit(true) : requestCombat}
                   >
                     ⚔ Iniciar Combate
                   </button>
@@ -262,7 +264,8 @@ export default function GMPanel() {
       </div>
 
       {showSettings && <CampaignSettings onClose={() => setShowSettings(false)} />}
-      {combatPendingRolls !== null && <CombatInitModal />}
+      {!isCoC && combatPendingRolls !== null && <CombatInitModal />}
+      {showCoCCombatInit && <CombatInitModalCoC onClose={() => setShowCoCCombatInit(false)} />}
       {showLevelUp && <LevelUpStatusModal onClose={() => setShowLevelUp(false)} />}
       {showSanityLoss && <SanityLossModal onClose={() => setShowSanityLoss(false)} />}
 
