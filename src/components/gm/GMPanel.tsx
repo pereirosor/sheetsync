@@ -94,6 +94,11 @@ export default function GMPanel() {
             {campaign.code}
           </div>
           <span style={{ fontSize: 11, color: 'var(--text2)' }}>
+            {isCoC
+              ? `Call of Cthulhu · ${campaign.settings.cocEra === 'modern' ? 'Era Moderna' : 'Anos 1920'}`
+              : 'Tormenta 20'}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
             {playerNames.length} jogador{playerNames.length !== 1 ? 'es' : ''}
             {gmCharacterNames.length > 0 &&
               ` · ${gmCharacterNames.length} NPC${gmCharacterNames.length !== 1 ? 's' : ''}`}

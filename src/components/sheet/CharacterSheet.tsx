@@ -67,6 +67,8 @@ export default function CharacterSheet() {
         <div>
           <p style={{ fontSize: 11, color: 'var(--text2)' }}>
             Campanha <strong style={{ color: 'var(--text)' }}>{campaign.code}</strong>
+            {' · '}
+            <span style={{ color: 'var(--text2)' }}>Tormenta 20</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

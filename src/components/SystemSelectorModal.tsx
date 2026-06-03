@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SYSTEM_CATALOG } from '../systems';
+import { useStore } from '../store';
 import type { CampaignSettings } from '../types';
 
 interface Props {
@@ -10,12 +11,17 @@ interface Props {
 type Era = '1920s' | 'modern';
 
 export default function SystemSelectorModal({ onConfirm, onCancel }: Props) {
+  const addToast = useStore((s) => s.addToast);
   const [selected, setSelected] = useState<string | null>(null);
   const [era, setEra] = useState<Era>('1920s');
   const [step, setStep] = useState<'system' | 'era'>('system');
 
   const handleCardClick = (id: string, available: boolean, needsEra?: boolean) => {
-    if (!available) return;
+    if (!available) {
+      const meta = SYSTEM_CATALOG.find((s) => s.id === id);
+      addToast(`${meta?.name ?? id} ainda não está disponível.`, 'info');
+      return;
+    }
     if (needsEra) {
       setSelected(id);
       setStep('era');
