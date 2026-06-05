@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   COC_SKILLS,
   calcSkillBase,
@@ -66,6 +66,8 @@ export default function SkillsStep({ state, update, era }: Props) {
   const occRemaining = totalOccPts - occPointsSpent;
   const personalRemaining = totalPersonalPts - personalPointsSpent;
 
+  const [skillInputs, setSkillInputs] = useState<Record<string, string>>({});
+
   const handleChange = (skill: CoCSkillDef, delta: number, isOcc: boolean) => {
     const base = skillBase(skill);
     const cur = currentValues[skill.id] ?? base;
@@ -75,6 +77,15 @@ export default function SkillsStep({ state, update, era }: Props) {
       if (isOcc && occRemaining < delta) return;
       if (!isOcc && personalRemaining < delta) return;
     }
+    update({ skillValues: { ...currentValues, [skill.id]: next } });
+  };
+
+  const handleSet = (skill: CoCSkillDef, target: number, isOcc: boolean) => {
+    const base = skillBase(skill);
+    const cur = currentValues[skill.id] ?? base;
+    const remaining = isOcc ? occRemaining : personalRemaining;
+    const maxAllowed = Math.min(SKILL_MAX, cur + remaining);
+    const next = Math.max(base, Math.min(maxAllowed, isNaN(target) ? base : target));
     update({ skillValues: { ...currentValues, [skill.id]: next } });
   };
 
@@ -98,12 +109,28 @@ export default function SkillsStep({ state, update, era }: Props) {
           onClick={() => handleChange(skill, -1, isOcc)}
           disabled={val <= base}
         >−</button>
-        <span style={{
-          width: 36, textAlign: 'center', fontWeight: 700, fontSize: 13,
-          color: spent > 0 ? 'var(--gold)' : 'var(--text)',
-        }}>
-          {val}%
-        </span>
+        <input
+          type="number"
+          value={skillInputs[skill.id] ?? val}
+          onChange={e => setSkillInputs(prev => ({ ...prev, [skill.id]: e.target.value }))}
+          onBlur={e => {
+            handleSet(skill, Math.round(Number(e.target.value)), isOcc);
+            setSkillInputs(prev => { const n = { ...prev }; delete n[skill.id]; return n; });
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              handleSet(skill, Math.round(Number(skillInputs[skill.id] ?? val)), isOcc);
+              setSkillInputs(prev => { const n = { ...prev }; delete n[skill.id]; return n; });
+            }
+          }}
+          style={{
+            width: 48, textAlign: 'center', fontWeight: 700, fontSize: 13,
+            color: spent > 0 ? 'var(--gold)' : 'var(--text)',
+            background: 'var(--bg-input)', border: '1px solid var(--border)',
+            borderRadius: 4, padding: '2px 4px',
+          }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--text2)' }}>%</span>
         <button
           className="btn btn-secondary btn-sm"
           style={{ padding: '1px 7px', fontSize: 13 }}

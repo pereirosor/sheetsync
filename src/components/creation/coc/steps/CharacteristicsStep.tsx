@@ -102,7 +102,10 @@ export default function CharacteristicsStep({ state, update }: Props) {
             className={`btn btn-sm ${charGenMethod === m.id ? 'btn-gold' : 'btn-secondary'}`}
             style={{ flex: 1, fontSize: 11, padding: '6px 4px' }}
             onClick={() => {
-              update({ charGenMethod: m.id, characteristics: { strength: 0, constitution: 0, size: 0, dexterity: 0, appearance: 0, intelligence: 0, power: 0, education: 0 }, lockedChars: {} });
+              const blank = m.id === 'pointbuy'
+                ? { strength: CHAR_MIN, constitution: CHAR_MIN, size: CHAR_MIN, dexterity: CHAR_MIN, appearance: CHAR_MIN, intelligence: CHAR_MIN, power: CHAR_MIN, education: CHAR_MIN }
+                : { strength: 0, constitution: 0, size: 0, dexterity: 0, appearance: 0, intelligence: 0, power: 0, education: 0 };
+              update({ charGenMethod: m.id, characteristics: blank, lockedChars: {} });
               setQsAssignments({});
             }}
           >
@@ -215,7 +218,7 @@ export default function CharacteristicsStep({ state, update }: Props) {
                   disabled={ch[def.key] <= CHAR_MIN}
                 >−</button>
                 <span style={{ width: 36, textAlign: 'center', fontWeight: 700 }}>
-                  {ch[def.key] || CHAR_MIN}
+                  {ch[def.key]}
                 </span>
                 <button
                   className="btn btn-secondary btn-sm"

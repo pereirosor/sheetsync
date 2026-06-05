@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { CoCWizardState } from '../wizardState';
 
 interface Props {
@@ -19,8 +20,17 @@ const BG_FIELDS: { key: keyof CoCWizardState['background']; label: string; place
 ];
 
 export default function BackgroundStep({ state, update }: Props) {
+  const [ageInput, setAgeInput] = useState(String(state.age));
+
   const setBg = (key: keyof CoCWizardState['background'], value: string) => {
     update({ background: { ...state.background, [key]: value } });
+  };
+
+  const commitAge = (raw: string) => {
+    const n = Number(raw);
+    const clamped = isNaN(n) || raw.trim() === '' ? 15 : Math.max(15, Math.min(90, n));
+    setAgeInput(String(clamped));
+    update({ age: clamped });
   };
 
   return (
@@ -45,8 +55,10 @@ export default function BackgroundStep({ state, update }: Props) {
           </label>
           <input
             type="number"
-            value={state.age}
-            onChange={e => update({ age: Math.max(15, Math.min(90, Number(e.target.value))) })}
+            value={ageInput}
+            onChange={e => setAgeInput(e.target.value)}
+            onBlur={e => commitAge(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && commitAge(ageInput)}
             min={15}
             max={90}
             className="input-field"
