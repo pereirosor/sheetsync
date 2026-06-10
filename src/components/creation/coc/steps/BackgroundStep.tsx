@@ -4,6 +4,7 @@ import type { CoCWizardState } from '../wizardState';
 interface Props {
   state: CoCWizardState;
   update: (patch: Partial<CoCWizardState>) => void;
+  characterName: string;
 }
 
 const BG_FIELDS: { key: keyof CoCWizardState['background']; label: string; placeholder: string }[] = [
@@ -19,7 +20,7 @@ const BG_FIELDS: { key: keyof CoCWizardState['background']; label: string; place
   { key: 'fellowInvestigator', label: 'Colega Investigador',     placeholder: 'Um outro investigador do grupo.' },
 ];
 
-export default function BackgroundStep({ state, update }: Props) {
+export default function BackgroundStep({ state, update, characterName }: Props) {
   const [ageInput, setAgeInput] = useState(String(state.age));
 
   const setBg = (key: keyof CoCWizardState['background'], value: string) => {
@@ -38,16 +39,9 @@ export default function BackgroundStep({ state, update }: Props) {
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <div style={{ flex: 1 }}>
           <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>
-            Nome do Investigador *
+            Nome do Investigador <span className="locked-badge">Fixado</span>
           </label>
-          <input
-            type="text"
-            value={state.name}
-            onChange={e => update({ name: e.target.value })}
-            placeholder="Nome completo"
-            className="input-field"
-            style={{ width: '100%' }}
-          />
+          <span className="locked-value">{characterName}</span>
         </div>
         <div style={{ width: 80 }}>
           <label style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>

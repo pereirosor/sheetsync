@@ -191,6 +191,8 @@ export interface Character {
   cocSkills?: Record<string, number>;
   // CoC 7e — occupation chosen during creation
   cocOccupation?: string;
+  // CoC 7e — money & assets (Tabela II: Dinheiro e Patrimônio)
+  cocFinance?: { cash: number; assets: number; spendingLevel: number };
   // CoC 7e — combat/health flags
   majorWound?: boolean;       // single hit ≥ max HP/2
   firstAidUsed?: boolean;     // First Aid already applied since last major wound
