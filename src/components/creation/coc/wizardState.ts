@@ -13,7 +13,9 @@ export interface CoCWizardState {
   // skill ID → current target value (base + spent points)
   skillValues: Record<string, number>;
 
-  name: string;
+  // shop purchases made in the equipment step
+  purchases: { defId: string; kind: 'weapon' | 'item'; quantity: number }[];
+
   age: number;
   background: {
     ideology: string;
@@ -44,7 +46,7 @@ export const initialCoCWizardState: CoCWizardState = {
   lockedChars: {},
   occupationId: '',
   skillValues: {},
-  name: '',
+  purchases: [],
   age: 25,
   background: {
     ideology: '',

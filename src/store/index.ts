@@ -91,7 +91,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   owner: ch.owner ?? 'player',
   inScene: ch.inScene ?? false,
   originBenefits: ch.originBenefits ?? [],
-  created: ch.created ?? (!!ch.race && !!ch.class && !!ch.origin),
+  created: ch.created ?? (!!ch.race && !!ch.class && (!!ch.origin || !!ch.cocOccupation)),
   conditions: ch.conditions ?? [],
   powers: ch.powers ?? [],
   pendingLevelUp: ch.pendingLevelUp ?? false,
@@ -446,10 +446,25 @@ export const useStore = create<AppState>((set, get) => ({
 
     let currentPlayerName: string | null = null;
     if (myRole === 'player') {
-      const myChar = Object.values(characters).find(
+      // Prefer the finished sheet; older bugged flows could leave a duplicate
+      // not-yet-created row for the same user (see fix/coc-persistence).
+      const mine = Object.values(characters).filter(
         (c) => c.userId === user.id && c.owner === 'player',
       );
+      const myChar = mine.find((c) => c.created) ?? mine[0];
       currentPlayerName = myChar?.name ?? null;
+
+      // Clean up orphan duplicates left behind by the old CoC rename bug
+      if (myChar?.created && mine.length > 1) {
+        for (const orphan of mine) {
+          if (orphan.name === myChar.name || orphan.created) continue;
+          delete characters[orphan.name];
+          void supabase
+            .from('characters')
+            .delete()
+            .match({ campaign_code: campaign.code, name: orphan.name });
+        }
+      }
     }
 
     set({ role: myRole, campaign, characters, currentPlayerName });

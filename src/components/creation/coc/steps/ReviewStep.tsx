@@ -4,10 +4,16 @@ import {
 } from '../../../../systems/coc7e/characteristics';
 import { getOccupationById } from '../../../../systems/coc7e/occupations';
 import { COC_SKILLS, calcSkillBase, getSkillDisplayName } from '../../../../systems/coc7e/skills';
+import {
+  financeFromCredit, formatMoney, getItemById, getWeaponById,
+} from '../../../../systems/coc7e/equipment';
+import { getWizardCredit, purchaseCost } from './EquipmentStep';
 import type { CoCWizardState } from '../wizardState';
 
 interface Props {
   state: CoCWizardState;
+  characterName: string;
+  era: '1920s' | 'modern';
 }
 
 const CHAR_ABBR: Record<string, string> = {
@@ -16,7 +22,7 @@ const CHAR_ABBR: Record<string, string> = {
   power: 'POD', education: 'EDU',
 };
 
-export default function ReviewStep({ state }: Props) {
+export default function ReviewStep({ state, characterName, era }: Props) {
   const ch = state.characteristics;
   const occ = getOccupationById(state.occupationId);
   const dex = ch.dexterity, edu = ch.education;
@@ -33,6 +39,10 @@ export default function ReviewStep({ state }: Props) {
     return val > base;
   });
 
+  const credit  = getWizardCredit(state);
+  const finance = financeFromCredit(credit, era);
+  const cashRemaining = Math.max(0, finance.cash - purchaseCost(state.purchases, era));
+
   return (
     <div>
       <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16 }}>
@@ -47,7 +57,7 @@ export default function ReviewStep({ state }: Props) {
         <div style={{ display: 'flex', gap: 16 }}>
           <div>
             <span style={{ fontSize: 11, color: 'var(--text2)' }}>Nome</span>
-            <div style={{ fontWeight: 600 }}>{state.name || <span style={{ color: 'var(--danger)' }}>Não definido</span>}</div>
+            <div style={{ fontWeight: 600 }}>{characterName}</div>
           </div>
           <div>
             <span style={{ fontSize: 11, color: 'var(--text2)' }}>Idade</span>
@@ -101,6 +111,41 @@ export default function ReviewStep({ state }: Props) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Equipment & money */}
+      <section style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 6 }}>
+          Equipamento e Dinheiro
+        </div>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+          <div>
+            <span style={{ fontSize: 11, color: 'var(--text2)' }}>Dinheiro</span>
+            <div style={{ fontWeight: 600, color: 'var(--gold)' }}>{formatMoney(cashRemaining)}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: 11, color: 'var(--text2)' }}>Patrimônio</span>
+            <div style={{ fontWeight: 600 }}>{formatMoney(finance.assets)}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: 11, color: 'var(--text2)' }}>Nível de Gastos</span>
+            <div style={{ fontWeight: 600 }}>{formatMoney(finance.spendingLevel)}</div>
+          </div>
+        </div>
+        {state.purchases.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {state.purchases.map(p => {
+              const def = p.kind === 'weapon' ? getWeaponById(p.defId) : getItemById(p.defId);
+              return (
+                <span key={p.defId} className="wizard-tag">
+                  {def?.name}{p.quantity > 1 ? ` x${p.quantity}` : ''}
+                </span>
+              );
+            })}
+          </div>
+        ) : (
+          <p style={{ fontSize: 12, color: 'var(--text2)' }}>Nenhum item comprado.</p>
+        )}
       </section>
 
       {/* Raised skills */}

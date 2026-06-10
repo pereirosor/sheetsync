@@ -4,13 +4,15 @@ import ProgressBar from '../../ui/ProgressBar';
 import DiceRoller from '../DiceRoller';
 import CharacteristicsTab from './tabs/CharacteristicsTab';
 import SkillsTab from './tabs/SkillsTab';
+import EquipmentTab from './tabs/EquipmentTab';
 import DeathModal from '../DeathModal';
 
-type TabId = 'characteristics' | 'skills' | 'notes';
+type TabId = 'characteristics' | 'skills' | 'equipment' | 'notes';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'characteristics', label: 'Características' },
   { id: 'skills',          label: 'Perícias' },
+  { id: 'equipment',       label: 'Equipamentos' },
   { id: 'notes',           label: 'Notas' },
 ];
 
@@ -187,6 +189,9 @@ export default function CoCSheet() {
               )}
               {activeTab === 'skills' && (
                 <SkillsTab char={char} characterName={currentPlayerName} era={era} />
+              )}
+              {activeTab === 'equipment' && (
+                <EquipmentTab char={char} characterName={currentPlayerName} era={era} />
               )}
               {activeTab === 'notes' && (
                 <textarea

@@ -1,29 +1,34 @@
 import { useState } from 'react';
 import { useStore } from '../../../store';
 import {
-  calcHP, calcMP, calcSAN, calcMOV,
+  calcHP, calcMP, calcSAN, calcMOV, getDamageBonus,
 } from '../../../systems/coc7e/characteristics';
 import { getOccupationById } from '../../../systems/coc7e/occupations';
 import { COC_SKILLS, calcSkillBase } from '../../../systems/coc7e/skills';
+import {
+  financeFromCredit, getItemById, getWeaponById,
+} from '../../../systems/coc7e/equipment';
 import WizardProgress from '../WizardProgress';
 import WizardNav from '../WizardNav';
 import CharacteristicsStep from './steps/CharacteristicsStep';
 import OccupationStep from './steps/OccupationStep';
 import SkillsStep from './steps/SkillsStep';
 import BackgroundStep from './steps/BackgroundStep';
+import EquipmentStep, { getWizardCredit, purchaseCost } from './steps/EquipmentStep';
 import ReviewStep from './steps/ReviewStep';
 import { initialCoCWizardState, type CoCWizardState } from './wizardState';
-import type { Character } from '../../../types';
+import type { Character, EquipmentItem } from '../../../types';
 
-type StepId = 'characteristics' | 'occupation' | 'skills' | 'background' | 'review';
+type StepId = 'characteristics' | 'occupation' | 'skills' | 'background' | 'equipment' | 'review';
 
-const STEPS: StepId[] = ['characteristics', 'occupation', 'skills', 'background', 'review'];
+const STEPS: StepId[] = ['characteristics', 'occupation', 'skills', 'background', 'equipment', 'review'];
 
 const STEP_LABELS: Record<StepId, string> = {
   characteristics: 'Características',
   occupation: 'Ocupação',
   skills: 'Perícias',
   background: 'Background',
+  equipment: 'Equipamento',
   review: 'Revisão',
 };
 
@@ -34,7 +39,8 @@ function isStepValid(step: StepId, state: CoCWizardState): boolean {
     case 'characteristics': return allFilled;
     case 'occupation': return !!state.occupationId;
     case 'skills': return true; // optional to spend all points
-    case 'background': return !!state.name.trim();
+    case 'background': return true; // name is fixed; all fields optional
+    case 'equipment': return true; // shopping is optional
     case 'review': return true;
   }
 }
@@ -47,16 +53,64 @@ function getMissingMessage(step: StepId, state: CoCWizardState): string | null {
       return null;
     case 'occupation':
       return 'Selecione uma ocupação.';
-    case 'background':
-      return 'Informe o nome do investigador.';
     default:
       return null;
   }
 }
 
+const genId = () => Math.random().toString(36).slice(2, 9);
+
+/** Resolve a parte do bônus de dano (BD) numa expressão rolável, ex: "1d8" + "+1D4" → "1d8+1d4" */
+function resolveDiceExpr(baseDice: string, damage: string, damageBonus: string): string {
+  if (!baseDice) return '';
+  // ½BD e BD nulo não entram na expressão; BD numérico negativo entra como termo "+-N"
+  if (!damage.includes('+BD')) return baseDice;
+  if (damageBonus === '+1D4') return `${baseDice}+1d4`;
+  if (damageBonus === '+1D6') return `${baseDice}+1d6`;
+  if (damageBonus === '-1')   return `${baseDice}+-1`;
+  if (damageBonus === '-2')   return `${baseDice}+-2`;
+  return baseDice;
+}
+
+function buildEquipment(state: CoCWizardState, damageBonus: string): EquipmentItem[] {
+  const items: EquipmentItem[] = [];
+  for (const p of state.purchases) {
+    if (p.kind === 'weapon') {
+      const w = getWeaponById(p.defId);
+      if (!w) continue;
+      const skillDef = COC_SKILLS.find((s) => s.id === w.skill);
+      const skillName = skillDef
+        ? (skillDef.specialization ? `${skillDef.name} (${skillDef.specialization})` : skillDef.name)
+        : w.skill;
+      items.push({
+        id: genId(),
+        name: w.name,
+        type: 'weapon',
+        bonusOrDamage: w.damage,
+        weight: 0,
+        notes: `Perícia: ${skillName} · Alcance ${w.range} · Munição ${w.ammo} · Defeito ${w.malfunction}`,
+        diceExpr: resolveDiceExpr(w.baseDice, w.damage, damageBonus),
+        quantity: p.quantity > 1 ? p.quantity : undefined,
+      });
+    } else {
+      const i = getItemById(p.defId);
+      if (!i) continue;
+      items.push({
+        id: genId(),
+        name: i.name,
+        type: 'item',
+        bonusOrDamage: '',
+        weight: 0,
+        notes: i.notes ?? '',
+        quantity: p.quantity > 1 ? p.quantity : undefined,
+      });
+    }
+  }
+  return items;
+}
+
 function buildCharacter(
   state: CoCWizardState,
-  current: Character,
   era: '1920s' | 'modern',
 ): Partial<Character> {
   const ch = state.characteristics;
@@ -81,8 +135,13 @@ function buildCharacter(
   const creditBase = occ ? occ.creditRating[0] : 0;
   cocSkills['credito'] = state.skillValues['credito'] ?? creditBase;
 
+  // Money & assets (Tabela II) + purchased equipment
+  const finance = financeFromCredit(cocSkills['credito'], era);
+  const db = getDamageBonus(ch.strength, ch.size);
+  const equipment = buildEquipment(state, db.damageBonus);
+  const cashRemaining = Math.max(0, finance.cash - purchaseCost(state.purchases, era));
+
   return {
-    name: state.name.trim() || current.name,
     class: occ?.name ?? 'Investigador',
     race: 'Humano',
     origin: '',
@@ -109,6 +168,8 @@ function buildCharacter(
     skills: {},
     cocSkills,
     cocOccupation: state.occupationId,
+    equipment,
+    cocFinance: { cash: cashRemaining, assets: finance.assets, spendingLevel: finance.spendingLevel },
     notes: buildBackgroundNotes(state),
     created: true,
   };
@@ -162,7 +223,7 @@ export default function CoCCreationWizard() {
     }
     if (isLast) {
       setSaving(true);
-      const patch = buildCharacter(wizState, char, era);
+      const patch = buildCharacter(wizState, era);
       updateCharacter(currentPlayerName, patch);
       setSaving(false);
     } else {
@@ -174,8 +235,9 @@ export default function CoCCreationWizard() {
     characteristics: <CharacteristicsStep state={wizState} update={update} />,
     occupation:      <OccupationStep      state={wizState} update={update} era={era} />,
     skills:          <SkillsStep          state={wizState} update={update} era={era} />,
-    background:      <BackgroundStep      state={wizState} update={update} />,
-    review:          <ReviewStep          state={wizState} />,
+    background:      <BackgroundStep      state={wizState} update={update} characterName={currentPlayerName} />,
+    equipment:       <EquipmentStep       state={wizState} update={update} era={era} />,
+    review:          <ReviewStep          state={wizState} characterName={currentPlayerName} era={era} />,
   };
 
   return (
