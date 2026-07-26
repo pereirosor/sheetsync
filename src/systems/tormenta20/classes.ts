@@ -38,7 +38,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Inspiração +1', 'Magias (1º círculo)'],
     trainedSkills: ['atuacao', 'reflexos'],
     skillChoices: [
-      { count: 6, options: ['acrobacia', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intuicao', 'investigacao', 'jogatina', 'ladinagem', 'luta', 'misticismo', 'nobreza', 'percepcao', 'pontaria', 'religiao', 'vontade'] },
+      { count: 6, options: ['acrobacia', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'ladinagem', 'luta', 'misticismo', 'nobreza', 'percepcao', 'pontaria', 'religiao', 'vontade'] },
     ],
     abilities: [
       { level: 1, name: 'Inspiração +1', description: 'Gaste 1 PM: um aliado em alcance curto recebe +1 em qualquer teste até o fim da cena.' },

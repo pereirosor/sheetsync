@@ -373,9 +373,12 @@ export const useStore = create<AppState>((set, get) => ({
   // ── Dashboard ────────────────────────────────────────────────────────────
 
   loadMyCampaigns: async () => {
+    const { user } = get();
+    if (!user) { set({ myCampaigns: [] }); return; }
     const { data } = await supabase
       .from('campaign_members')
-      .select('role, campaigns(code, created_at)');
+      .select('role, campaigns(code, created_at)')
+      .eq('user_id', user.id);
     if (!data) { set({ myCampaigns: [] }); return; }
     const summaries: CampaignSummary[] = (data as { role: string; campaigns: unknown }[])
       .map((r) => {
