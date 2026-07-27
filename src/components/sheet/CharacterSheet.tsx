@@ -28,38 +28,49 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'notes', label: 'Notas' },
 ];
 
-export default function CharacterSheet() {
+interface Props {
+  /** Ficha a exibir. Omitido = a do próprio jogador logado. */
+  characterName?: string;
+  /** Visualização sem edição (usado pelo Mestre ao abrir a ficha de um jogador). */
+  readOnly?: boolean;
+}
+
+export default function CharacterSheet({ characterName, readOnly }: Props = {}) {
   const [activeTab, setActiveTab] = useState<TabId>('identity');
   const [showLevelUp, setShowLevelUp] = useState(false);
 
   const currentPlayerName = useStore((s) => s.currentPlayerName);
   const campaign = useStore((s) => s.campaign);
 
-  if (campaign?.gameSystemId === 'coc7e') return <CoCSheet />;
-  const char = useStore((s) =>
-    s.currentPlayerName ? s.characters[s.currentPlayerName] : null,
-  );
+  const name = characterName ?? currentPlayerName;
+  const char = useStore((s) => (name ? s.characters[name] ?? null : null));
   const leaveCampaign = useStore((s) => s.leaveCampaign);
   const combatState = useStore((s) => s.combatState);
   const rollDeathSave = useStore((s) => s.rollDeathSave);
 
-  if (!currentPlayerName || !char || !campaign) return null;
+  // Early returns só depois de TODOS os hooks: gameSystemId chega via sync e pode
+  // mudar entre renders, o que quebraria a ordem dos hooks.
+  if (campaign?.gameSystemId === 'coc7e') {
+    return <CoCSheet characterName={characterName} readOnly={readOnly} />;
+  }
+  if (!name || !char || !campaign) return null;
 
   const deathState = char.deathState ?? 'alive';
   const isDying = deathState === 'dying';
   const isDead = deathState === 'dead';
 
   const { vitals } = char;
-  const fallbackInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
+  const fallbackInitial = (char.name || name).charAt(0).toUpperCase();
   const iniMod = calcMod2(char.attributes.dexterity);
   const iniDisplay = iniMod >= 0 ? `+${iniMod}` : `${iniMod}`;
 
   return (
     <>
-    <CombatRollModal />
-    {isDead && <DeathModal character={char} />}
-    {showLevelUp && !isDead && (
-      <LevelUpWizard characterName={currentPlayerName} onClose={() => setShowLevelUp(false)} />
+    {/* Modais e ações de dono da ficha não existem na visão do Mestre. */}
+    {!readOnly && <CombatRollModal />}
+    {!readOnly && isDead && <DeathModal character={char} />}
+    {!readOnly && showLevelUp && !isDead && (
+      <LevelUpWizard characterName={name} onClose={() => setShowLevelUp(false)} />
     )}
     <div className="sheet-root">
       {/* Header */}
@@ -72,7 +83,7 @@ export default function CharacterSheet() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {char.pendingLevelUp && (
+          {!readOnly && char.pendingLevelUp && (
             <button
               className="btn btn-secondary btn-sm"
               style={{ color: 'var(--gold)', borderColor: 'rgba(201,168,76,.5)', fontWeight: 600 }}
@@ -81,9 +92,11 @@ export default function CharacterSheet() {
               ⬆ Subir de Nível
             </button>
           )}
-          <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
-            Sair
-          </button>
+          {!readOnly && (
+            <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
+              Sair
+            </button>
+          )}
         </div>
       </div>
 
@@ -91,11 +104,11 @@ export default function CharacterSheet() {
       <div className="sheet-layout">
         {/* Sidebar esquerda */}
         <aside className="sidebar-left">
-          <AvatarUpload characterName={currentPlayerName} fallbackInitial={fallbackInitial} />
+          <AvatarUpload characterName={name} fallbackInitial={fallbackInitial} readOnly={readOnly} />
 
           <div className="char-nameblock">
             <h3 style={{ fontSize: 15, color: 'var(--gold)', fontFamily: 'Cinzel, serif', marginBottom: 2 }}>
-              {char.name || currentPlayerName}
+              {char.name || name}
             </h3>
             <p style={{ fontSize: 11, color: 'var(--text2)' }}>
               {char.class || '—'} · Nível {char.level}
@@ -139,11 +152,11 @@ export default function CharacterSheet() {
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 4 }}>
                 {isDead ? '💀 MORTO' : deathState === 'stabilized' ? '😴 Estabilizado' : `🩸 Sangrando (${vitals.hp.current} PV)`}
               </div>
-              {isDying && (
+              {!readOnly && isDying && (
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: 11, marginTop: 4 }}
-                  onClick={() => rollDeathSave(currentPlayerName)}
+                  onClick={() => rollDeathSave(name)}
                   title="d20 + mod. CON + nível/2 vs CD 15"
                 >
                   🎲 Testar Constituição (CD 15)
@@ -241,20 +254,22 @@ export default function CharacterSheet() {
             </div>
 
             <div>
-              {activeTab === 'identity' && <IdentityTab characterName={currentPlayerName} />}
-              {activeTab === 'attributes' && <AttributesTab characterName={currentPlayerName} />}
-              {activeTab === 'skills' && <SkillsTab characterName={currentPlayerName} />}
-              {activeTab === 'equipment' && <EquipmentTab characterName={currentPlayerName} />}
-              {activeTab === 'spells' && <SpellsTab characterName={currentPlayerName} />}
-              {activeTab === 'notes' && <NotesTab characterName={currentPlayerName} />}
+              {activeTab === 'identity' && <IdentityTab characterName={name} readOnly={readOnly} />}
+              {activeTab === 'attributes' && <AttributesTab characterName={name} readOnly={readOnly} />}
+              {activeTab === 'skills' && <SkillsTab characterName={name} />}
+              {activeTab === 'equipment' && <EquipmentTab characterName={name} readOnly={readOnly} />}
+              {activeTab === 'spells' && <SpellsTab characterName={name} readOnly={readOnly} />}
+              {activeTab === 'notes' && <NotesTab characterName={name} readOnly={readOnly} />}
             </div>
           </div>
         </main>
 
-        {/* Sidebar direita — rolador de dados */}
-        <aside className="sidebar-right">
-          <DiceRoller />
-        </aside>
+        {/* Sidebar direita — rolador de dados (só faz sentido para o dono da ficha) */}
+        {!readOnly && (
+          <aside className="sidebar-right">
+            <DiceRoller />
+          </aside>
+        )}
       </div>
     </div>
     </>

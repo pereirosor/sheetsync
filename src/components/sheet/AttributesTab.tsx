@@ -4,6 +4,7 @@ import type { AttributeKey } from '../../types';
 
 interface Props {
   characterName: string;
+  readOnly?: boolean;
 }
 
 const ATTRS: { key: AttributeKey; label: string; abbr: string }[] = [
@@ -15,13 +16,13 @@ const ATTRS: { key: AttributeKey; label: string; abbr: string }[] = [
   { key: 'charisma', label: 'Carisma', abbr: 'CAR' },
 ];
 
-export default function AttributesTab({ characterName }: Props) {
+export default function AttributesTab({ characterName, readOnly }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
 
   if (!char) return null;
 
-  const locked = !!char.created;
+  const locked = !!char.created || !!readOnly;
 
   const setAttr = (key: AttributeKey, value: number) => {
     if (locked) return;
@@ -34,7 +35,9 @@ export default function AttributesTab({ characterName }: Props) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <p className="sec-title" style={{ margin: 0 }}>Atributos</p>
-        {locked && <span className="locked-badge">fixados na criação</span>}
+        {locked && (
+          <span className="locked-badge">{readOnly ? 'somente leitura' : 'fixados na criação'}</span>
+        )}
       </div>
       <div className="g3" style={{ gap: 12 }}>
         {ATTRS.map(({ key, label, abbr }) => {

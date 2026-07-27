@@ -4,14 +4,16 @@ import { useStore } from '../../store';
 interface Props {
   characterName: string;
   fallbackInitial: string;
+  readOnly?: boolean;
 }
 
-export default function AvatarUpload({ characterName, fallbackInitial }: Props) {
+export default function AvatarUpload({ characterName, fallbackInitial, readOnly }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const avatarDataUrl = useStore((s) => s.characters[characterName]?.avatarDataUrl);
   const updateCharacter = useStore((s) => s.updateCharacter);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -23,13 +25,17 @@ export default function AvatarUpload({ characterName, fallbackInitial }: Props) 
   };
 
   return (
-    <div className="char-avatar" onClick={() => inputRef.current?.click()}>
+    <div
+      className="char-avatar"
+      style={readOnly ? { cursor: 'default' } : undefined}
+      onClick={() => { if (!readOnly) inputRef.current?.click(); }}
+    >
       {avatarDataUrl ? (
         <img src={avatarDataUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
       ) : (
         fallbackInitial
       )}
-      <div className="char-avatar-overlay">📷</div>
+      {!readOnly && <div className="char-avatar-overlay">📷</div>}
       <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
     </div>
   );

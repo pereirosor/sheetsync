@@ -1,6 +1,6 @@
 import tormenta20 from '../../../systems/tormenta20';
 import { resolveSkillId } from '../../../utils/resolveSkillId';
-import type { WizardState } from '../wizardState';
+import { hasVersatile, VERSATILE_SKILL_COUNT, type WizardState } from '../wizardState';
 
 interface Props {
   state: WizardState;
@@ -14,6 +14,18 @@ export default function SkillsStep({ state, update }: Props) {
   const originSkillIds = new Set(
     state.originBenefits.map(resolveSkillId).filter(Boolean) as string[]
   );
+
+  // Versátil (Humano): 2 perícias treinadas livres, sem restrição de classe.
+  const versatileOn = hasVersatile(state);
+  const versatilePicked = state.versatileSkills;
+
+  const toggleVersatile = (id: string) => {
+    if (versatilePicked.includes(id)) {
+      update({ versatileSkills: versatilePicked.filter((s) => s !== id) });
+    } else if (versatilePicked.length < VERSATILE_SKILL_COUNT) {
+      update({ versatileSkills: [...versatilePicked, id] });
+    }
+  };
 
   const toggleSkill = (id: string, groupIdx: number) => {
     const group = cd.skillChoices[groupIdx];
@@ -57,6 +69,52 @@ export default function SkillsStep({ state, update }: Props) {
                 <span key={id} className="wizard-tag" style={{ background: 'var(--muted)', color: 'var(--text)' }}>
                   {sk?.name ?? id}
                 </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {versatileOn && (
+        <div className="wizard-info-card">
+          <p style={{ fontWeight: 600, marginBottom: 2, fontSize: 13 }}>
+            Versátil (Humano) — escolha {VERSATILE_SKILL_COUNT} perícias
+            <span style={{ color: 'var(--text2)', fontWeight: 400, marginLeft: 8 }}>
+              ({versatilePicked.length}/{VERSATILE_SKILL_COUNT})
+            </span>
+          </p>
+          <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8 }}>
+            Livres — não precisam pertencer à sua classe.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {tormenta20.skillList.map((sk) => {
+              const isAutoTrained =
+                cd.trainedSkills.includes(sk.id) ||
+                originSkillIds.has(sk.id) ||
+                state.skillChoices.includes(sk.id);
+              const checked = versatilePicked.includes(sk.id);
+              const full = versatilePicked.length >= VERSATILE_SKILL_COUNT;
+              const disabled = isAutoTrained || (!checked && full);
+              return (
+                <label
+                  key={sk.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    opacity: disabled ? 0.5 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleVersatile(sk.id)}
+                  />
+                  <span>{sk.name}</span>
+                  {isAutoTrained && (
+                    <span style={{ fontSize: 10, color: 'var(--text2)' }}>(já treinada)</span>
+                  )}
+                </label>
               );
             })}
           </div>

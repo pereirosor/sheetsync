@@ -8,6 +8,7 @@ import tormenta20 from '../../systems/tormenta20';
 
 interface Props {
   characterName: string;
+  readOnly?: boolean;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
@@ -74,7 +75,7 @@ const emptyEffectForm = (): EffectFormState => ({
   value: '1',
 });
 
-export default function EquipmentTab({ characterName }: Props) {
+export default function EquipmentTab({ characterName, readOnly }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
@@ -85,7 +86,11 @@ export default function EquipmentTab({ characterName }: Props) {
 
   if (!char) return null;
 
-  const setItems = (equipment: EquipmentItem[]) => updateCharacter(characterName, { equipment });
+  // Ponto único de escrita da aba — o guard aqui cobre add/remove/editar/efeitos.
+  const setItems = (equipment: EquipmentItem[]) => {
+    if (readOnly) return;
+    updateCharacter(characterName, { equipment });
+  };
   const addItem = () => setItems([...char.equipment, emptyItem()]);
   const requestRemove = (item: EquipmentItem) => {
     if ((item.quantity ?? 1) > 1) {

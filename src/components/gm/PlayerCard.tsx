@@ -5,6 +5,7 @@ import { CONDITIONS, CONDITION_MAP } from '../../data/conditions';
 import ProgressBar from '../ui/ProgressBar';
 import Badge from '../ui/Badge';
 import NPCSheetModal from './NPCSheetModal';
+import PlayerSheetModal from './PlayerSheetModal';
 
 interface Props {
   characterName: string;
@@ -96,12 +97,10 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
               </p>
             </div>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-              {isNPC && (
-                <button className="btn btn-secondary btn-xs" onClick={() => setShowSheet(true)}
-                  title="Abrir ficha completa do NPC">
-                  Ver Ficha
-                </button>
-              )}
+              <button className="btn btn-secondary btn-xs" onClick={() => setShowSheet(true)}
+                title={isNPC ? 'Abrir ficha completa do NPC' : 'Abrir ficha completa do jogador (somente leitura)'}>
+                Ver Ficha
+              </button>
               <Badge label="CA" value={vitals.ac} color="var(--gold)" />
               <Badge label="Desl." value={`${char.speed}q`} />
             </div>
@@ -294,7 +293,10 @@ export default function PlayerCard({ characterName, isNPC }: Props) {
         </div>
       </div>
 
-      {showSheet && <NPCSheetModal character={char} onClose={() => setShowSheet(false)} />}
+      {showSheet && (isNPC
+        ? <NPCSheetModal character={char} onClose={() => setShowSheet(false)} />
+        : <PlayerSheetModal characterName={characterName} onClose={() => setShowSheet(false)} />
+      )}
     </>
   );
 }

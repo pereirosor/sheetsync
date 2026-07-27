@@ -7,7 +7,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Caminho do Arcanista', 'Magias (1º círculo)'],
     trainedSkills: ['misticismo', 'vontade'],
     skillChoices: [
-      { count: 1, options: ['conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'iniciativa', 'oficio', 'percepcao'] },
+      { count: 1, options: ['conhecimento', 'iniciativa', 'oficio', 'percepcao'] },
     ],
     abilities: [
       { level: 1, name: 'Caminho do Arcanista', description: 'Escolha um caminho arcano (Mago, Ilusionista, Necromante etc.) que define seus poderes exclusivos.' },
@@ -38,7 +38,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Inspiração +1', 'Magias (1º círculo)'],
     trainedSkills: ['atuacao', 'reflexos'],
     skillChoices: [
-      { count: 6, options: ['acrobacia', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'ladinagem', 'luta', 'misticismo', 'nobreza', 'percepcao', 'pontaria', 'religiao', 'vontade'] },
+      { count: 6, options: ['acrobacia', 'cavalgar', 'conhecimento', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'ladinagem', 'luta', 'misticismo', 'nobreza', 'percepcao', 'pontaria', 'religiao', 'vontade'] },
     ],
     abilities: [
       { level: 1, name: 'Inspiração +1', description: 'Gaste 1 PM: um aliado em alcance curto recebe +1 em qualquer teste até o fim da cena.' },
@@ -108,7 +108,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Devoto', 'Magias (1º círculo)'],
     trainedSkills: ['religiao', 'vontade'],
     skillChoices: [
-      { count: 2, options: ['conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'intuicao', 'luta', 'misticismo', 'nobreza', 'oficio', 'percepcao'] },
+      { count: 2, options: ['conhecimento', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'intuicao', 'luta', 'misticismo', 'nobreza', 'oficio', 'percepcao'] },
     ],
     abilities: [
       { level: 1, name: 'Devoto', description: 'Você serve a uma divindade, seguindo suas obrigações e restrições em troca de Poderes Concedidos.' },
@@ -122,7 +122,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Devoto', 'Empatia Selvagem', 'Magias (1º círculo)'],
     trainedSkills: ['sobrevivencia', 'vontade'],
     skillChoices: [
-      { count: 4, options: ['adestramento', 'atletismo', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'cura', 'fortitude', 'iniciativa', 'intuicao', 'luta', 'misticismo', 'oficio', 'percepcao', 'religiao'] },
+      { count: 4, options: ['adestramento', 'atletismo', 'cavalgar', 'conhecimento', 'cura', 'fortitude', 'iniciativa', 'intuicao', 'luta', 'misticismo', 'oficio', 'percepcao', 'religiao'] },
     ],
     abilities: [
       { level: 1, name: 'Devoto', description: 'Você serve a uma divindade da natureza (geralmente Allihanna), seguindo suas obrigações em troca de Poderes Concedidos.' },
@@ -154,7 +154,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Engenhosidade', 'Protótipo'],
     trainedSkills: ['oficio', 'vontade'],
     skillChoices: [
-      { count: 4, options: ['conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'investigacao', 'luta', 'misticismo', 'percepcao', 'pilotagem', 'pontaria'] },
+      { count: 4, options: ['conhecimento', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'investigacao', 'luta', 'misticismo', 'percepcao', 'pilotagem', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Engenhosidade', description: 'Gaste 2 PM ao fazer um teste de perícia: receba bônus igual ao modificador de INT. Não funciona em testes de ataque.' },
@@ -175,7 +175,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Ataque Furtivo +1d6', 'Especialista'],
     trainedSkills: ['ladinagem', 'reflexos'],
     skillChoices: [
-      { count: 8, options: ['acrobacia', 'atletismo', 'atuacao', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'luta', 'oficio', 'percepcao', 'pilotagem', 'pontaria'] },
+      { count: 8, options: ['acrobacia', 'atletismo', 'atuacao', 'cavalgar', 'conhecimento', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'luta', 'oficio', 'percepcao', 'pilotagem', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Ataque Furtivo +1d6', description: 'Uma vez por rodada, quando atinge um alvo desprevenido ou flanqueado, cause +1d6 de dano extra. Aumenta +1d6 a cada dois níveis.' },
@@ -213,7 +213,7 @@ export const classData: Record<string, ClassInfo> = {
     trainedSkills: ['vontade'],
     skillChoices: [
       { count: 1, options: ['diplomacia', 'intimidacao'] },
-      { count: 4, options: ['adestramento', 'atuacao', 'cavalgar', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_dungeons', 'conhecimento_plano', 'conhecimento_nobre', 'conhecimento_religioso', 'enganacao', 'fortitude', 'guerra', 'iniciativa', 'intuicao', 'investigacao', 'jogatina', 'luta', 'nobreza', 'oficio', 'percepcao', 'pontaria'] },
+      { count: 4, options: ['adestramento', 'atuacao', 'cavalgar', 'conhecimento', 'enganacao', 'fortitude', 'guerra', 'iniciativa', 'intuicao', 'investigacao', 'jogatina', 'luta', 'nobreza', 'oficio', 'percepcao', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Autoconfiança', description: 'Some seu bônus de CAR em vez de DES na Defesa (exceto de armadura pesada).' },
@@ -269,7 +269,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Afinidade Elemental', 'Ataque Elemental', 'Magias (1º círculo)'],
     trainedSkills: ['misticismo', 'vontade'],
     skillChoices: [
-      { count: 4, options: ['atletismo', 'conhecimento_arcano', 'conhecimento_natureza', 'conhecimento_plano', 'fortitude', 'intuicao', 'luta', 'percepcao', 'reflexos', 'sobrevivencia'] },
+      { count: 4, options: ['atletismo', 'conhecimento', 'fortitude', 'intuicao', 'luta', 'percepcao', 'reflexos', 'sobrevivencia'] },
     ],
     abilities: [
       { level: 1, name: 'Afinidade Elemental', description: 'Escolha um elemento (ar, água, fogo ou terra). Você recebe resistência 5 ao dano desse elemento e seus ataques e magias podem causar dano desse tipo.' },
