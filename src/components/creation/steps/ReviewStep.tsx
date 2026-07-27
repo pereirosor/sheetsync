@@ -1,13 +1,12 @@
 import tormenta20 from '../../../systems/tormenta20';
 import type { AttributeKey } from '../../../types';
-import type { WizardState } from '../wizardState';
+import { computeFinalAttributes, computeDerivedVitals, T20_ATTRS, type WizardState } from '../wizardState';
 
 const ATTR_LABELS: Record<AttributeKey, string> = {
   strength: 'For', dexterity: 'Des', constitution: 'Con',
   intelligence: 'Int', wisdom: 'Sab', charisma: 'Car',
   size: 'Tam', power: 'Pod', appearance: 'Apa', education: 'Edu',
 };
-const ALL_ATTRS: AttributeKey[] = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 
 function calcMod(v: number) { return Math.floor((v - 10) / 2); }
 function modStr(v: number) { const m = calcMod(v); return m >= 0 ? `+${m}` : `${m}`; }
@@ -18,24 +17,15 @@ interface Props {
 }
 
 export default function ReviewStep({ state, characterName }: Props) {
-  const raceInfo = tormenta20.raceData[state.race];
   const cd = tormenta20.classData[state.charClass];
   const magicType = tormenta20.classMagicType[state.charClass];
 
-  const fixedMods = raceInfo?.attributeMods ?? {};
-  const varBonuses = state.raceBonusChoices ?? {};
+  const finals = computeFinalAttributes(state);
+  const getTotal = (attr: (typeof T20_ATTRS)[number]) => finals[attr];
 
-  const getTotal = (attr: AttributeKey) => {
-    const base = state.attributesBase[attr];
-    const fixed = (fixedMods as Record<string, number>)[attr] ?? 0;
-    const variable = (varBonuses as Record<string, number>)[attr] ?? 0;
-    return 10 + base + fixed + variable;
-  };
-
-  const conTotal = getTotal('constitution');
-  const conMod = calcMod(conTotal);
-  const hpMax = cd ? cd.hpBase + conMod + (cd.hpPerLevel) * 0 : 10;
-  const manaMax = cd ? cd.mpPerLevel : 0;
+  const derived = computeDerivedVitals(state, 1);
+  const hpMax = derived?.hpMax ?? 10;
+  const manaMax = derived?.manaMax ?? 0;
 
   const allSkills = [
     ...(cd?.trainedSkills ?? []),
@@ -68,7 +58,7 @@ export default function ReviewStep({ state, characterName }: Props) {
       <div className="wizard-info-card">
         <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Atributos Finais</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {ALL_ATTRS.map((attr) => {
+          {T20_ATTRS.map((attr) => {
             const total = getTotal(attr);
             return (
               <div key={attr} style={{ textAlign: 'center', padding: '6px 10px', background: 'var(--bg-card2)', borderRadius: 6, minWidth: 56 }}>
@@ -79,6 +69,11 @@ export default function ReviewStep({ state, characterName }: Props) {
             );
           })}
         </div>
+        {state.attributeMethod === 'manual' && (
+          <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 8, fontStyle: 'italic' }}>
+            Valores inseridos manualmente — os modificadores raciais já estão inclusos.
+          </p>
+        )}
       </div>
 
       {uniqueSkills.length > 0 && (

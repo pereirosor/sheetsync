@@ -1,18 +1,28 @@
 import { useState } from 'react';
 import tormenta20 from '../../../systems/tormenta20';
 import type { AttributeKey } from '../../../types';
-import type { WizardState } from '../wizardState';
+import {
+  T20_ATTRS, MANUAL_MIN, MANUAL_MAX,
+  EMPTY_ATTR_BASE, DEFAULT_MANUAL_ATTRS,
+  getRaceMods, computeFinalAttributes, computeDerivedVitals,
+  type AttributeMethod, type T20AttributeKey, type WizardState,
+} from '../wizardState';
 
 const ATTR_LABELS: Record<AttributeKey, string> = {
   strength: 'Força', dexterity: 'Destreza', constitution: 'Constituição',
   intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma',
   size: 'Tamanho', power: 'Poder', appearance: 'Aparência', education: 'Educação',
 };
-const ALL_ATTRS: AttributeKey[] = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 const POINT_BUY_COST: Record<number, number> = { '-1': -1, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4 };
 const MAX_PTS = 10;
 const MIN_BASE = -1;
 const MAX_BASE = 4;
+
+const METHOD_LABELS: { id: AttributeMethod; label: string; desc: string }[] = [
+  { id: 'point-buy', label: 'Compra de Pontos', desc: 'Distribua 10 pontos. Base: –1 a +4 (cada +1 custa 1 ponto).' },
+  { id: 'roll', label: 'Rolar 4d6', desc: 'Role 4d6 e descarte o menor, até 3 vezes. Atribua os resultados aos atributos.' },
+  { id: 'manual', label: 'Manual', desc: 'Digite os valores finais da ficha de papel. Os modificadores raciais NÃO serão somados.' },
+];
 
 function rollD6(): number { return Math.floor(Math.random() * 6) + 1; }
 function roll4d6Drop(): number {
@@ -36,23 +46,17 @@ export default function AttributesStep({ state, update }: Props) {
   const [dragging, setDragging] = useState<number | null>(null);
 
   const raceInfo = tormenta20.raceData[state.race];
-  const fixedMods = raceInfo?.attributeMods ?? {};
-  const varBonuses = state.raceBonusChoices ?? {};
+  const raceMods = getRaceMods(state);
+  const finals = computeFinalAttributes(state);
+  const getTotal = (attr: T20AttributeKey) => finals[attr];
 
-  const getTotal = (attr: AttributeKey) => {
-    const base = state.attributesBase[attr];
-    const fixed = (fixedMods as Record<string, number>)[attr] ?? 0;
-    const variable = (varBonuses as Record<string, number>)[attr] ?? 0;
-    return 10 + base + fixed + variable;
-  };
-
-  const ptSpent = ALL_ATTRS.reduce((sum, a) => sum + (POINT_BUY_COST[state.attributesBase[a]] ?? 0), 0);
+  const ptSpent = T20_ATTRS.reduce((sum, a) => sum + (POINT_BUY_COST[state.attributesBase[a]] ?? 0), 0);
   const ptLeft = MAX_PTS - ptSpent;
 
-  const setBase = (attr: AttributeKey, val: number) => {
+  const setBase = (attr: T20AttributeKey, val: number) => {
     if (val < MIN_BASE || val > MAX_BASE) return;
     const newBases = { ...state.attributesBase, [attr]: val };
-    const newSpent = ALL_ATTRS.reduce((sum, a) => sum + (POINT_BUY_COST[newBases[a]] ?? 0), 0);
+    const newSpent = T20_ATTRS.reduce((sum, a) => sum + (POINT_BUY_COST[newBases[a]] ?? 0), 0);
     if (newSpent > MAX_PTS) return;
     update({ attributesBase: newBases });
   };
@@ -64,11 +68,11 @@ export default function AttributesStep({ state, update }: Props) {
 
   const rollAll = () => {
     if (state.rollAttempts >= MAX_ROLLS) return;
-    const newPool = ALL_ATTRS.map(() => roll4d6Drop());
+    const newPool = T20_ATTRS.map(() => roll4d6Drop());
     setPendingPool(newPool);
     update({
       rolledPool: newPool, rolledAssignments: {},
-      attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 },
+      attributesBase: { ...EMPTY_ATTR_BASE },
       rollAttempts: state.rollAttempts + 1,
     });
   };
@@ -85,39 +89,66 @@ export default function AttributesStep({ state, update }: Props) {
     const newPool = [...pool];
     newPool[lowestIdx] = roll4d6Drop();
     const newBases = { ...state.attributesBase };
-    for (const [a, idx] of Object.entries(state.rolledAssignments) as [AttributeKey, number][]) {
+    for (const [a, idx] of Object.entries(state.rolledAssignments) as [T20AttributeKey, number][]) {
       newBases[a] = (newPool[idx] ?? 10) - 10;
     }
     setPendingPool(newPool);
     update({ rolledPool: newPool, attributesBase: newBases });
   };
 
-  const assignRoll = (attr: AttributeKey, poolIdx: number) => {
+  const assignRoll = (attr: T20AttributeKey, poolIdx: number) => {
     const prev = { ...state.rolledAssignments };
-    const oldIdx = Object.entries(prev).find(([, v]) => v === poolIdx)?.[0] as AttributeKey | undefined;
+    const oldIdx = Object.entries(prev).find(([, v]) => v === poolIdx)?.[0] as T20AttributeKey | undefined;
     if (oldIdx) delete prev[oldIdx];
     prev[attr] = poolIdx;
-    const newBases: Record<AttributeKey, number> = { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 };
-    for (const [a, idx] of Object.entries(prev) as [AttributeKey, number][]) {
+    const newBases: Record<AttributeKey, number> = { ...EMPTY_ATTR_BASE };
+    for (const [a, idx] of Object.entries(prev) as [T20AttributeKey, number][]) {
       newBases[a] = (pool[idx] ?? 10) - 10;
     }
     update({ rolledAssignments: prev, attributesBase: newBases });
   };
 
+  const selectMethod = (m: AttributeMethod) => {
+    setPendingPool([]);
+    setDragging(null);
+    update({
+      attributeMethod: m,
+      attributesBase: { ...EMPTY_ATTR_BASE },
+      rolledPool: [],
+      rolledAssignments: {},
+      attributesManual: { ...DEFAULT_MANUAL_ATTRS },
+    });
+  };
+
+  const setManual = (attr: T20AttributeKey, raw: string) => {
+    if (raw === '') { update({ attributesManual: { ...state.attributesManual, [attr]: 0 } }); return; }
+    if (!/^\d{1,2}$/.test(raw)) return;
+    const n = Number(raw);
+    if (n > MANUAL_MAX) return;
+    update({ attributesManual: { ...state.attributesManual, [attr]: n } });
+  };
+
+  const derived = computeDerivedVitals(state, 1);
+  const raceBonusEntries = Object.entries(state.raceBonusChoices ?? {}) as [T20AttributeKey, number][];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', gap: 8 }}>
-        {(['point-buy', 'roll'] as const).map((m) => (
+        {METHOD_LABELS.map((m) => (
           <button
-            key={m}
-            className={`btn ${state.attributeMethod === m ? 'btn-gold' : 'btn-secondary'}`}
-            style={{ flex: 1, fontSize: 13 }}
-            onClick={() => update({ attributeMethod: m, attributesBase: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0, size: 0, power: 0, appearance: 0, education: 0 }, rolledPool: [], rolledAssignments: {} })}
+            key={m.id}
+            className={`btn btn-sm ${state.attributeMethod === m.id ? 'btn-gold' : 'btn-secondary'}`}
+            style={{ flex: 1, fontSize: 11, padding: '6px 4px' }}
+            onClick={() => selectMethod(m.id)}
           >
-            {m === 'point-buy' ? 'Compra de Pontos' : 'Rolar 4d6'}
+            {m.label}
           </button>
         ))}
       </div>
+
+      <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: -8 }}>
+        {METHOD_LABELS.find((m) => m.id === state.attributeMethod)?.desc}
+      </p>
 
       {state.attributeMethod === 'point-buy' && (
         <>
@@ -126,15 +157,12 @@ export default function AttributesStep({ state, update }: Props) {
               {ptLeft}
             </span>
             <span style={{ color: 'var(--text2)', fontSize: 13, marginLeft: 6 }}>pontos restantes</span>
-            <p style={{ color: 'var(--text2)', fontSize: 11, marginTop: 4 }}>Base: –1 a +4 (cada +1 custa 1 ponto)</p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {ALL_ATTRS.map((attr) => {
+            {T20_ATTRS.map((attr) => {
               const base = state.attributesBase[attr];
               const total = getTotal(attr);
-              const fixed = (fixedMods as Record<string, number>)[attr] ?? 0;
-              const variable = (varBonuses as Record<string, number>)[attr] ?? 0;
-              const raceMod = fixed + variable;
+              const raceMod = raceMods[attr];
               return (
                 <div key={attr} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
                   <span style={{ flex: 1, fontSize: 13 }}>{ATTR_LABELS[attr]}</span>
@@ -238,13 +266,11 @@ export default function AttributesStep({ state, update }: Props) {
                   </p>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {ALL_ATTRS.map((attr) => {
+                  {T20_ATTRS.map((attr) => {
                     const idx = state.rolledAssignments[attr];
                     const val = idx !== undefined ? pool[idx] : null;
                     const total = val !== null ? getTotal(attr) : null;
-                    const fixed = (fixedMods as Record<string, number>)[attr] ?? 0;
-                    const variable = (varBonuses as Record<string, number>)[attr] ?? 0;
-                    const raceMod = fixed + variable;
+                    const raceMod = raceMods[attr];
                     return (
                       <div
                         key={attr}
@@ -281,6 +307,89 @@ export default function AttributesStep({ state, update }: Props) {
             </>
           )}
         </>
+      )}
+
+      {state.attributeMethod === 'manual' && (
+        <>
+          {state.race && (
+            <div className="wizard-info-card">
+              <p style={{ fontWeight: 600, marginBottom: 4, fontSize: 13 }}>
+                Modificadores de {state.race} — apenas referência
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text2)' }}>
+                {raceInfo?.attributeBonuses ?? 'Sem modificadores fixos.'}
+                {raceBonusEntries.length > 0 && (
+                  <>
+                    {' '}— escolhidos: {raceBonusEntries.map(([a]) => ATTR_LABELS[a]).join(', ')} (+2 cada)
+                  </>
+                )}
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--warning, #e0a020)', marginTop: 6, fontWeight: 600 }}>
+                Estes modificadores NÃO serão somados. Digite os valores finais, já com os bônus raciais inclusos.
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
+                As escolhas de +2 da raça continuam registradas na ficha, mas não alteram os valores digitados.
+              </p>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {T20_ATTRS.map((attr) => {
+              const val = state.attributesManual[attr];
+              const raceMod = raceMods[attr];
+              return (
+                <div key={attr} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'var(--surface2, rgba(255,255,255,0.04))', borderRadius: 6 }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{ATTR_LABELS[attr]}</span>
+                  {raceMod !== 0 && (
+                    <span
+                      style={{ fontSize: 11, color: 'var(--text2)', textDecoration: 'line-through', width: 36, textAlign: 'center' }}
+                      title="Modificador racial não aplicado"
+                    >
+                      {raceMod > 0 ? `+${raceMod}` : raceMod}
+                    </span>
+                  )}
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={MANUAL_MIN}
+                    max={MANUAL_MAX}
+                    value={val === 0 ? '' : val}
+                    onChange={(e) => setManual(attr, e.target.value)}
+                    style={{ width: 64, textAlign: 'center', fontSize: 14, fontWeight: 600 }}
+                    placeholder="—"
+                  />
+                  <span style={{ width: 40, textAlign: 'right', fontSize: 12, color: 'var(--text2)' }}>
+                    {val > 0 ? modStr(val) : '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {derived && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 6,
+          background: 'var(--bg-card2)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Prévia (nível 1)
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: 'var(--text2)' }}>PV</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gold)' }}>{derived.hpMax}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: 'var(--text2)' }}>Mana</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gold)' }}>{derived.manaMax}</div>
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 8 }}>
+            Ajuste PV/Mana na ficha depois de finalizar, se necessário.
+          </p>
+        </div>
       )}
     </div>
   );

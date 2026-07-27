@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
-import tormenta20, { calcMod2 } from '../../systems/tormenta20';
+import tormenta20 from '../../systems/tormenta20';
 import CoCCreationWizard from './coc/CoCCreationWizard';
 import { resolveSkillId } from '../../utils/resolveSkillId';
-import type { AttributeKey, Character, EquipmentItem, SpellItem } from '../../types';
+import type { CharacterAttributes, Character, EquipmentItem, SpellItem } from '../../types';
 import WizardProgress from './WizardProgress';
 import WizardNav from './WizardNav';
 import RaceStep from './steps/RaceStep';
@@ -15,9 +15,11 @@ import SkillsStep from './steps/SkillsStep';
 import EquipmentStep from './steps/EquipmentStep';
 import SpellsStep from './steps/SpellsStep';
 import ReviewStep from './steps/ReviewStep';
-import { initialWizardState, type WizardState } from './wizardState';
+import {
+  initialWizardState, computeFinalAttributes, computeDerivedVitals,
+  T20_ATTRS, MANUAL_MIN, MANUAL_MAX, type WizardState,
+} from './wizardState';
 
-const ALL_ATTRS: AttributeKey[] = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 const AUTO_KIT = ['Mochila', 'Saco de Dormir', 'Traje de Viajante'];
 
 function getVariableCount(race: string): number {
@@ -57,15 +59,23 @@ function isStepValid(step: StepId, state: WizardState): boolean {
     case 'classPath': return !!state.classPath;
     case 'origin': return !!state.origin && state.originBenefits.length === 2;
     case 'attributes': {
-      if (state.attributeMethod === 'point-buy') {
-        const spent = ALL_ATTRS.reduce((s, a) => {
-          const v = state.attributesBase[a];
-          const cost = v === -1 ? -1 : v;
-          return s + cost;
-        }, 0);
-        return spent === 10;
+      switch (state.attributeMethod) {
+        case 'point-buy': {
+          const spent = T20_ATTRS.reduce((s, a) => {
+            const v = state.attributesBase[a];
+            const cost = v === -1 ? -1 : v;
+            return s + cost;
+          }, 0);
+          return spent === 10;
+        }
+        case 'manual':
+          return T20_ATTRS.every((a) => {
+            const v = state.attributesManual[a];
+            return Number.isInteger(v) && v >= MANUAL_MIN && v <= MANUAL_MAX;
+          });
+        case 'roll':
+          return T20_ATTRS.every((a) => state.rolledAssignments[a] !== undefined);
       }
-      return ALL_ATTRS.every((a) => state.rolledAssignments[a] !== undefined);
     }
     case 'skills': {
       const cd = tormenta20.classData[state.charClass];
@@ -108,14 +118,20 @@ function getMissingItems(step: StepId, state: WizardState): string[] {
       break;
     case 'attributes': {
       if (state.attributeMethod === 'point-buy') {
-        const spent = ALL_ATTRS.reduce((s, a) => {
+        const spent = T20_ATTRS.reduce((s, a) => {
           const v = state.attributesBase[a];
           return s + (v === -1 ? -1 : v);
         }, 0);
         if (spent < 10) items.push(`Distribua ${10 - spent} ponto(s) restante(s)`);
         else if (spent > 10) items.push('Você excedeu o limite de pontos');
+      } else if (state.attributeMethod === 'manual') {
+        const bad = T20_ATTRS.filter((a) => {
+          const v = state.attributesManual[a];
+          return !Number.isInteger(v) || v < MANUAL_MIN || v > MANUAL_MAX;
+        }).length;
+        if (bad > 0) items.push(`Preencha ${bad} atributo(s) com valores entre ${MANUAL_MIN} e ${MANUAL_MAX}`);
       } else {
-        const missing = ALL_ATTRS.filter((a) => state.rolledAssignments[a] === undefined).length;
+        const missing = T20_ATTRS.filter((a) => state.rolledAssignments[a] === undefined).length;
         if (missing > 0) items.push(`Atribua ${missing} valor(es) aos atributos`);
       }
       break;
@@ -146,22 +162,13 @@ function getMissingItems(step: StepId, state: WizardState): string[] {
 }
 
 function buildCharacter(current: Character, state: WizardState): Partial<Character> {
-  const raceInfo = tormenta20.raceData[state.race];
   const cd = tormenta20.classData[state.charClass];
-  const fixedMods = raceInfo?.attributeMods ?? {};
-  const varBonuses = state.raceBonusChoices ?? {};
 
-  const attrs: Record<AttributeKey, number> = {} as Record<AttributeKey, number>;
-  for (const attr of ALL_ATTRS) {
-    const base = state.attributesBase[attr];
-    const fixed = (fixedMods as Record<string, number>)[attr] ?? 0;
-    const variable = (varBonuses as Record<string, number>)[attr] ?? 0;
-    attrs[attr] = 10 + base + fixed + variable;
-  }
+  const attrs: CharacterAttributes = { ...current.attributes, ...computeFinalAttributes(state) };
 
-  const conMod = calcMod2(attrs.constitution);
-  const hpMax = cd ? cd.hpBase + conMod + (current.level - 1) * cd.hpPerLevel : current.vitals.hp.max;
-  const manaMax = cd ? cd.mpPerLevel * current.level : current.vitals.mana.max;
+  const derived = computeDerivedVitals(state, current.level);
+  const hpMax = derived?.hpMax ?? current.vitals.hp.max;
+  const manaMax = derived?.manaMax ?? current.vitals.mana.max;
 
   const originSkillIds = new Set(
     state.originBenefits.map(resolveSkillId).filter(Boolean) as string[]
