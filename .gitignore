@@ -9,3 +9,6 @@ yarn-debug.log*
 .env.local
 .env.*.local
 .claude/
+
+# Material de referência (livros PDF) — não versionar: repo público + copyright
+pdfs de referencia/

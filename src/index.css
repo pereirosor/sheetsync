@@ -276,6 +276,35 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .sheet-root { height: auto; min-height: 100vh; overflow: visible; }
 }
 
+/* ---- Ficha embutida em modal (Mestre vendo a ficha de um jogador) ----
+   O CharacterSheet é um shell de viewport inteira: 100vh + .page-header sticky.
+   Dentro de um modal que rola, esse header grudava e clipava por cima do resto.
+   Aqui a ficha passa a preencher o modal e rolar nos painéis internos, como já
+   faz em tela cheia — o modal em si não rola. */
+.sheet-embedded {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.sheet-embedded .sheet-root {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Sem viewport próprio para grudar, o sticky só criava contexto de empilhamento. */
+.sheet-embedded .page-header {
+  position: static;
+  z-index: auto;
+}
+@media (max-width: 960px) {
+  /* A regra mobile solta a altura do .sheet-root; dentro do modal isso faria a
+     ficha transbordar de novo. O scroll fica no .sheet-layout. */
+  .sheet-embedded .sheet-root { height: 100%; min-height: 0; overflow: hidden; }
+  .sheet-embedded .sheet-layout { overflow-y: auto; }
+}
+
 /* ---- Page header ---- */
 .page-header {
   background: var(--bg-card); border-bottom: 1px solid var(--border);
