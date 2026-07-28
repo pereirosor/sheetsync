@@ -38,6 +38,8 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Inspiração +1', 'Magias (1º círculo)'],
     trainedSkills: ['atuacao', 'reflexos'],
     skillChoices: [
+      // HOUSE RULE: 'intimidacao' NÃO consta na lista do Bardo no livro base.
+      // Mantida de propósito a pedido do mestre — não "corrigir" para o RAW.
       { count: 6, options: ['acrobacia', 'cavalgar', 'conhecimento', 'diplomacia', 'enganacao', 'furtividade', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'ladinagem', 'luta', 'misticismo', 'nobreza', 'percepcao', 'pontaria', 'religiao', 'vontade'] },
     ],
     abilities: [
@@ -56,7 +58,7 @@ export const classData: Record<string, ClassInfo> = {
     trainedSkills: ['reflexos'],
     skillChoices: [
       { count: 1, options: ['luta', 'pontaria'] },
-      { count: 4, options: ['acrobacia', 'atletismo', 'atuacao', 'enganacao', 'fortitude', 'furtividade', 'iniciativa', 'intimidacao', 'jogatina', 'oficio', 'percepcao', 'pilotagem'] },
+      { count: 4, options: ['acrobacia', 'atletismo', 'atuacao', 'enganacao', 'fortitude', 'furtividade', 'iniciativa', 'intimidacao', 'jogatina', 'luta', 'oficio', 'percepcao', 'pilotagem', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Audácia', description: 'Some seu bônus de CAR na Iniciativa. Sem armadura ou escudo pesado, some também na Defesa.' },
@@ -73,7 +75,7 @@ export const classData: Record<string, ClassInfo> = {
     trainedSkills: ['sobrevivencia'],
     skillChoices: [
       { count: 1, options: ['luta', 'pontaria'] },
-      { count: 6, options: ['adestramento', 'atletismo', 'cavalgar', 'cura', 'fortitude', 'furtividade', 'iniciativa', 'investigacao', 'oficio', 'percepcao', 'reflexos'] },
+      { count: 6, options: ['adestramento', 'atletismo', 'cavalgar', 'cura', 'fortitude', 'furtividade', 'iniciativa', 'investigacao', 'luta', 'oficio', 'percepcao', 'pontaria', 'reflexos'] },
     ],
     abilities: [
       { level: 1, name: 'Marca da Presa +1d4', description: 'Gaste 1 PM: marque uma criatura. Seus ataques contra ela causam +1d4 de dano extra. A marca dura a cena.' },
@@ -139,7 +141,7 @@ export const classData: Record<string, ClassInfo> = {
     trainedSkills: ['fortitude'],
     skillChoices: [
       { count: 1, options: ['luta', 'pontaria'] },
-      { count: 2, options: ['adestramento', 'atletismo', 'cavalgar', 'guerra', 'iniciativa', 'intimidacao', 'oficio', 'percepcao', 'reflexos'] },
+      { count: 2, options: ['adestramento', 'atletismo', 'cavalgar', 'guerra', 'iniciativa', 'intimidacao', 'luta', 'oficio', 'percepcao', 'pontaria', 'reflexos'] },
     ],
     abilities: [
       { level: 1, name: 'Ataque Especial +4', description: 'Gaste 1 PM: receba +4 em testes de ataque ou rolagens de dano (escolha antes de rolar). A cada 4 níveis, gaste +1 PM para +4 adicionais.' },
@@ -154,6 +156,10 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Engenhosidade', 'Protótipo'],
     trainedSkills: ['oficio', 'vontade'],
     skillChoices: [
+      // O livro repete Ofício nas opções porque no T20 Ofício é multi-instância
+      // (Ofício (armeiro), Ofício (alquimista)...) e dá para treinar vários.
+      // Este app modela Ofício como UMA perícia, então repetir aqui só criaria
+      // uma opção permanentemente desabilitada. Divergência proposital.
       { count: 4, options: ['conhecimento', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'investigacao', 'luta', 'misticismo', 'percepcao', 'pilotagem', 'pontaria'] },
     ],
     abilities: [
@@ -213,7 +219,7 @@ export const classData: Record<string, ClassInfo> = {
     trainedSkills: ['vontade'],
     skillChoices: [
       { count: 1, options: ['diplomacia', 'intimidacao'] },
-      { count: 4, options: ['adestramento', 'atuacao', 'cavalgar', 'conhecimento', 'enganacao', 'fortitude', 'guerra', 'iniciativa', 'intuicao', 'investigacao', 'jogatina', 'luta', 'nobreza', 'oficio', 'percepcao', 'pontaria'] },
+      { count: 4, options: ['adestramento', 'atuacao', 'cavalgar', 'conhecimento', 'diplomacia', 'enganacao', 'fortitude', 'guerra', 'iniciativa', 'intimidacao', 'intuicao', 'investigacao', 'jogatina', 'luta', 'nobreza', 'oficio', 'percepcao', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Autoconfiança', description: 'Some seu bônus de CAR em vez de DES na Defesa (exceto de armadura pesada).' },
@@ -249,9 +255,10 @@ export const classData: Record<string, ClassInfo> = {
     hpBase: 16, hpPerLevel: 4, mpPerLevel: 3,
     proficiencies: 'Armas marciais, escudos',
     level1Abilities: ['Dança da Areia', 'Movimento Furtivo'],
-    trainedSkills: ['furtividade', 'iniciativa'],
+    trainedSkills: ['reflexos'],
     skillChoices: [
-      { count: 4, options: ['acrobacia', 'atletismo', 'cavalgar', 'enganacao', 'fortitude', 'luta', 'percepcao', 'pontaria', 'reflexos', 'sobrevivencia'] },
+      { count: 1, options: ['luta', 'pontaria'] },
+      { count: 2, options: ['acrobacia', 'adestramento', 'atletismo', 'fortitude', 'furtividade', 'guerra', 'iniciativa', 'intimidacao', 'luta', 'oficio', 'percepcao', 'pontaria', 'sobrevivencia'] },
     ],
     abilities: [
       { level: 1, name: 'Dança da Areia', description: 'Ao se mover ao menos 3m antes de atacar, você recebe +2 no teste de ataque e +1d6 no dano. Você pode usar Furtividade para se esconder mesmo sem cobertura após atacar.' },
@@ -269,7 +276,7 @@ export const classData: Record<string, ClassInfo> = {
     level1Abilities: ['Afinidade Elemental', 'Ataque Elemental', 'Magias (1º círculo)'],
     trainedSkills: ['misticismo', 'vontade'],
     skillChoices: [
-      { count: 4, options: ['atletismo', 'conhecimento', 'fortitude', 'intuicao', 'luta', 'percepcao', 'reflexos', 'sobrevivencia'] },
+      { count: 4, options: ['acrobacia', 'atletismo', 'conhecimento', 'cura', 'diplomacia', 'fortitude', 'iniciativa', 'luta', 'oficio', 'percepcao', 'pontaria', 'reflexos'] },
     ],
     abilities: [
       { level: 1, name: 'Afinidade Elemental', description: 'Escolha um elemento (ar, água, fogo ou terra). Você recebe resistência 5 ao dano desse elemento e seus ataques e magias podem causar dano desse tipo.' },
@@ -286,9 +293,9 @@ export const classData: Record<string, ClassInfo> = {
     hpBase: 20, hpPerLevel: 5, mpPerLevel: 3,
     proficiencies: 'Armas marciais, armaduras pesadas',
     level1Abilities: ['Arma Ancestral', 'Código do Samurai', 'Grito de Kiai'],
-    trainedSkills: ['fortitude', 'luta'],
+    trainedSkills: ['luta', 'vontade'],
     skillChoices: [
-      { count: 3, options: ['atletismo', 'cavalgar', 'guerra', 'iniciativa', 'intimidacao', 'intuicao', 'nobreza', 'percepcao', 'vontade'] },
+      { count: 2, options: ['acrobacia', 'adestramento', 'atletismo', 'cavalgar', 'conhecimento', 'diplomacia', 'fortitude', 'guerra', 'iniciativa', 'intimidacao', 'intuicao', 'nobreza', 'oficio', 'percepcao', 'pontaria'] },
     ],
     abilities: [
       { level: 1, name: 'Arma Ancestral', description: 'Você possui uma arma ancestral (katana ou outra arma marcial). Ela é considerada mágica e recebe +1 em ataque e dano por cada 5 níveis de personagem.' },
