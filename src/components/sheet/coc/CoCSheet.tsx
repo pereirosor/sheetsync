@@ -16,19 +16,25 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'notes',           label: 'Notas' },
 ];
 
-export default function CoCSheet() {
+interface Props {
+  /** Ficha a exibir. Omitido = a do próprio jogador logado. */
+  characterName?: string;
+  /** Visualização sem edição (usado pelo Mestre ao abrir a ficha de um jogador). */
+  readOnly?: boolean;
+}
+
+export default function CoCSheet({ characterName, readOnly }: Props = {}) {
   const [activeTab, setActiveTab] = useState<TabId>('characteristics');
 
   const currentPlayerName = useStore((s) => s.currentPlayerName);
   const campaign          = useStore((s) => s.campaign);
-  const char              = useStore((s) =>
-    s.currentPlayerName ? s.characters[s.currentPlayerName] : null,
-  );
+  const name              = characterName ?? currentPlayerName;
+  const char              = useStore((s) => (name ? s.characters[name] ?? null : null));
   const leaveCampaign        = useStore((s) => s.leaveCampaign);
   const updateCharacter      = useStore((s) => s.updateCharacter);
   const rollCoCDeathCheck    = useStore((s) => s.rollCoCDeathCheck);
 
-  if (!currentPlayerName || !char || !campaign) return null;
+  if (!name || !char || !campaign) return null;
 
   const deathState = char.deathState ?? 'alive';
   const isDying    = deathState === 'dying';
@@ -36,15 +42,16 @@ export default function CoCSheet() {
 
   const era      = campaign.settings.cocEra ?? '1920s';
   const eraLabel = era === 'modern' ? 'Era Moderna' : 'Anos 1920';
-  const fallbackInitial = (char.name || currentPlayerName).charAt(0).toUpperCase();
+  const fallbackInitial = (char.name || name).charAt(0).toUpperCase();
 
   const handleNotesChange = (notes: string) => {
-    updateCharacter(currentPlayerName, { notes });
+    if (readOnly) return;
+    updateCharacter(name, { notes });
   };
 
   return (
     <>
-    {isDead && <DeathModal character={char} />}
+    {!readOnly && isDead && <DeathModal character={char} />}
     <div className="sheet-root">
       {/* Header */}
       <div className="page-header">
@@ -55,9 +62,11 @@ export default function CoCSheet() {
             <span style={{ color: 'var(--text2)' }}>Call of Cthulhu · {eraLabel}</span>
           </p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
-          Sair
-        </button>
+        {!readOnly && (
+          <button className="btn btn-secondary btn-sm" onClick={leaveCampaign}>
+            Sair
+          </button>
+        )}
       </div>
 
       <div className="sheet-layout">
@@ -75,7 +84,7 @@ export default function CoCSheet() {
 
           <div className="char-nameblock">
             <h3 style={{ fontSize: 15, color: 'var(--gold)', fontFamily: 'Cinzel, serif', marginBottom: 2 }}>
-              {char.name || currentPlayerName}
+              {char.name || name}
             </h3>
             <p style={{ fontSize: 11, color: 'var(--text2)' }}>
               {char.class || 'Investigador'}
@@ -94,11 +103,11 @@ export default function CoCSheet() {
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: isDying ? 4 : 0 }}>
                     {isDead ? '💀 MORTO' : deathState === 'stabilized' ? '😴 Inconsciente (Estável)' : `🩸 HP 0 — Morrendo`}
                   </div>
-                  {isDying && (
+                  {!readOnly && isDying && (
                     <button
                       className="btn btn-secondary btn-sm"
                       style={{ fontSize: 11, marginTop: 2 }}
-                      onClick={() => rollCoCDeathCheck(currentPlayerName)}
+                      onClick={() => rollCoCDeathCheck(name)}
                       title="d100 ≤ CON para sobreviver"
                     >
                       🎲 Check de CON (d100 ≤ {char.attributes.constitution})
@@ -188,14 +197,15 @@ export default function CoCSheet() {
                 <CharacteristicsTab char={char} />
               )}
               {activeTab === 'skills' && (
-                <SkillsTab char={char} characterName={currentPlayerName} era={era} />
+                <SkillsTab char={char} characterName={name} era={era} />
               )}
               {activeTab === 'equipment' && (
-                <EquipmentTab char={char} characterName={currentPlayerName} era={era} />
+                <EquipmentTab char={char} characterName={name} era={era} readOnly={readOnly} />
               )}
               {activeTab === 'notes' && (
                 <textarea
                   value={char.notes || ''}
+                  readOnly={readOnly}
                   onChange={e => handleNotesChange(e.target.value)}
                   placeholder="Anotações, background, diário do investigador..."
                   style={{
@@ -210,10 +220,12 @@ export default function CoCSheet() {
           </div>
         </main>
 
-        {/* Sidebar right */}
-        <aside className="sidebar-right">
-          <DiceRoller />
-        </aside>
+        {/* Sidebar right — rolador só faz sentido para o dono da ficha */}
+        {!readOnly && (
+          <aside className="sidebar-right">
+            <DiceRoller />
+          </aside>
+        )}
       </div>
     </div>
     </>

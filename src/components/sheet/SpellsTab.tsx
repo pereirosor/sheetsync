@@ -8,6 +8,7 @@ import tormenta20 from '../../systems/tormenta20';
 
 interface Props {
   characterName: string;
+  readOnly?: boolean;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
@@ -26,7 +27,7 @@ const emptySpell = (): SpellItem => ({
 
 type SpellOption = { name: string } & SpellRef;
 
-export default function SpellsTab({ characterName }: Props) {
+export default function SpellsTab({ characterName, readOnly }: Props) {
   const char = useStore((s) => s.characters[characterName]);
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
@@ -44,7 +45,11 @@ export default function SpellsTab({ characterName }: Props) {
     .map(([name, s]) => ({ name, ...s }))
     .sort((a, b) => a.circle - b.circle || a.name.localeCompare(b.name));
 
-  const setSpells = (spells: SpellItem[]) => updateCharacter(characterName, { spells });
+  // Ponto único de escrita da aba — o guard aqui cobre add/remove/editar.
+  const setSpells = (spells: SpellItem[]) => {
+    if (readOnly) return;
+    updateCharacter(characterName, { spells });
+  };
   const addSpell = () => setSpells([...char.spells, emptySpell()]);
   const confirmRemove = () => {
     if (pendingDelete) setSpells(char.spells.filter((s) => s.id !== pendingDelete.id));

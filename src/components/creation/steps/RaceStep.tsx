@@ -27,7 +27,9 @@ export default function RaceStep({ state, update }: Props) {
   const varConfig = state.race ? getVariableConfig(state.race) : null;
 
   const handleRaceChange = (race: string) => {
-    update({ race, raceBonusChoices: {} });
+    // versatileSkills só existe para Humano; trocar de raça precisa limpá-las,
+    // senão perícias de uma raça anterior continuariam sendo salvas.
+    update({ race, raceBonusChoices: {}, versatileSkills: [] });
   };
 
   const toggleBonus = (attr: AttributeKey) => {

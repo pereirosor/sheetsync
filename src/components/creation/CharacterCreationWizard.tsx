@@ -17,7 +17,8 @@ import SpellsStep from './steps/SpellsStep';
 import ReviewStep from './steps/ReviewStep';
 import {
   initialWizardState, computeFinalAttributes, computeDerivedVitals,
-  T20_ATTRS, MANUAL_MIN, MANUAL_MAX, type WizardState,
+  T20_ATTRS, MANUAL_MIN, MANUAL_MAX, hasVersatile, VERSATILE_SKILL_COUNT,
+  type WizardState,
 } from './wizardState';
 
 const AUTO_KIT = ['Mochila', 'Saco de Dormir', 'Traje de Viajante'];
@@ -80,6 +81,7 @@ function isStepValid(step: StepId, state: WizardState): boolean {
     case 'skills': {
       const cd = tormenta20.classData[state.charClass];
       if (!cd) return true;
+      if (hasVersatile(state) && state.versatileSkills.length < VERSATILE_SKILL_COUNT) return false;
       return cd.skillChoices.every((group) => {
         const groupSel = state.skillChoices.filter((s) => group.options.includes(s));
         return groupSel.length >= group.count;
@@ -144,6 +146,10 @@ function getMissingItems(step: StepId, state: WizardState): string[] {
           if (chosen < group.count) items.push(`Escolha mais ${group.count - chosen} perícia(s)`);
         }
       }
+      if (hasVersatile(state)) {
+        const missing = VERSATILE_SKILL_COUNT - state.versatileSkills.length;
+        if (missing > 0) items.push(`Versátil: escolha mais ${missing} perícia(s)`);
+      }
       break;
     }
     case 'equipment': {
@@ -177,6 +183,9 @@ function buildCharacter(current: Character, state: WizardState): Partial<Charact
   for (const id of (cd?.trainedSkills ?? [])) skills[id] = true;
   for (const id of state.skillChoices) skills[id] = true;
   for (const id of originSkillIds) skills[id] = true;
+  if (hasVersatile(state)) {
+    for (const id of state.versatileSkills) skills[id] = true;
+  }
 
   const genId = () => Math.random().toString(36).slice(2, 9);
 
@@ -262,12 +271,13 @@ export default function CharacterCreationWizard() {
   const campaign = useStore((s) => s.campaign);
   const addToast = useStore((s) => s.addToast);
 
-  if (campaign?.gameSystemId === 'coc7e') return <CoCCreationWizard />;
-
   const [wizState, setWizState] = useState<WizardState>(initialWizardState);
   const [stepIdx, setStepIdx] = useState(0);
   const [saving, setSaving] = useState(false);
 
+  // Early returns só depois de TODOS os hooks: gameSystemId chega via sync e pode
+  // mudar entre renders, o que quebraria a ordem dos hooks.
+  if (campaign?.gameSystemId === 'coc7e') return <CoCCreationWizard />;
   if (!currentPlayerName || !char || !campaign) return null;
 
   const steps = buildSteps(wizState);

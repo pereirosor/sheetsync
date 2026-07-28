@@ -14,11 +14,12 @@ interface Props {
   char: Character;
   characterName: string;
   era: '1920s' | 'modern';
+  readOnly?: boolean;
 }
 
 const genId = () => Math.random().toString(36).slice(2, 9);
 
-export default function EquipmentTab({ char, characterName, era }: Props) {
+export default function EquipmentTab({ char, characterName, era, readOnly }: Props) {
   const updateCharacter = useStore((s) => s.updateCharacter);
   const rollDice = useStore((s) => s.rollDice);
   const [searchVal, setSearchVal] = useState('');
@@ -26,10 +27,13 @@ export default function EquipmentTab({ char, characterName, era }: Props) {
   const finance = char.cocFinance ?? { cash: 0, assets: 0, spendingLevel: 0 };
   const equipment = char.equipment ?? [];
 
-  const setItems = (items: EquipmentItem[]) =>
+  const setItems = (items: EquipmentItem[]) => {
+    if (readOnly) return;
     updateCharacter(characterName, { equipment: items });
+  };
 
   const setCash = (raw: string) => {
+    if (readOnly) return;
     const n = Number(raw);
     if (isNaN(n)) return;
     updateCharacter(characterName, { cocFinance: { ...finance, cash: Math.max(0, n) } });

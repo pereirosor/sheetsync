@@ -109,6 +109,8 @@ export default function AttributesStep({ state, update }: Props) {
   };
 
   const selectMethod = (m: AttributeMethod) => {
+    // Reclicar o método já ativo não pode zerar o que o usuário digitou/rolou.
+    if (m === state.attributeMethod) return;
     setPendingPool([]);
     setDragging(null);
     update({

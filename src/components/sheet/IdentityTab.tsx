@@ -4,6 +4,7 @@ import { resolveSkillId } from '../../utils/resolveSkillId';
 
 interface Props {
   characterName: string;
+  readOnly?: boolean;
 }
 
 const SIZES = ['Minúsculo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
@@ -13,13 +14,20 @@ const ALIGNMENTS = [
   'Leal e Mau', 'Neutro e Mau', 'Caótico e Mau',
 ];
 
-export default function IdentityTab({ characterName }: Props) {
+export default function IdentityTab({ characterName, readOnly }: Props) {
   const char = useStore((s) => s.characters[characterName]);
-  const updateCharacter = useStore((s) => s.updateCharacter);
+  const storeUpdate = useStore((s) => s.updateCharacter);
 
   if (!char) return null;
 
-  const locked = !!char.created;
+  // Guard central: em modo leitura nenhuma das escritas desta aba pode persistir
+  // (updateCharacter grava no Supabase e faz broadcast para o jogador).
+  const updateCharacter: typeof storeUpdate = (name, patch) => {
+    if (readOnly) return;
+    storeUpdate(name, patch);
+  };
+
+  const locked = !!char.created || !!readOnly;
 
   const upd = (field: string, value: unknown) =>
     updateCharacter(characterName, { [field]: value } as never);
@@ -337,7 +345,7 @@ export default function IdentityTab({ characterName }: Props) {
         <div className="form-row">
           <label>PV Máximo</label>
           <input
-            type="number" min={0} value={char.vitals.hp.max}
+            type="number" min={0} value={char.vitals.hp.max} readOnly={readOnly}
             onChange={(e) => {
               const max = Number(e.target.value);
               updateCharacter(characterName, {
@@ -349,7 +357,7 @@ export default function IdentityTab({ characterName }: Props) {
         <div className="form-row">
           <label>PV Atual</label>
           <input
-            type="number" min={0} max={char.vitals.hp.max} value={char.vitals.hp.current}
+            type="number" min={0} max={char.vitals.hp.max} value={char.vitals.hp.current} readOnly={readOnly}
             onChange={(e) => {
               updateCharacter(characterName, {
                 vitals: { ...char.vitals, hp: { ...char.vitals.hp, current: Number(e.target.value) } },
@@ -363,7 +371,7 @@ export default function IdentityTab({ characterName }: Props) {
         <div className="form-row">
           <label>Mana Máxima</label>
           <input
-            type="number" min={0} value={char.vitals.mana.max}
+            type="number" min={0} value={char.vitals.mana.max} readOnly={readOnly}
             onChange={(e) => {
               const max = Number(e.target.value);
               updateCharacter(characterName, {
@@ -375,7 +383,7 @@ export default function IdentityTab({ characterName }: Props) {
         <div className="form-row">
           <label>Mana Atual</label>
           <input
-            type="number" min={0} max={char.vitals.mana.max} value={char.vitals.mana.current}
+            type="number" min={0} max={char.vitals.mana.max} value={char.vitals.mana.current} readOnly={readOnly}
             onChange={(e) => {
               updateCharacter(characterName, {
                 vitals: { ...char.vitals, mana: { ...char.vitals.mana, current: Number(e.target.value) } },
@@ -388,7 +396,7 @@ export default function IdentityTab({ characterName }: Props) {
       <div className="form-row">
         <label>Classe de Armadura</label>
         <input
-          type="number" min={0} value={char.vitals.ac}
+          type="number" min={0} value={char.vitals.ac} readOnly={readOnly}
           onChange={(e) => {
             updateCharacter(characterName, {
               vitals: { ...char.vitals, ac: Number(e.target.value) },

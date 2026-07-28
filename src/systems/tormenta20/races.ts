@@ -7,6 +7,19 @@ export const raceList = [
   'Suraggel (Aggelus)', 'Suraggel (Sulfure)', 'Trog',
 ];
 
+/**
+ * skillBonuses = bônus numéricos FIXOS e incondicionais de perícia, somados
+ * automaticamente em skillModifiers.ts. Fonte: "Raças livro base.pdf".
+ *
+ * Ficam de fora de propósito (o campo não consegue representá-los):
+ *  - Anão / Conhecimento das Rochas: +2 em Percepção e Sobrevivência apenas
+ *    "realizados no subterrâneo" — condicional.
+ *  - Goblin / Engenhoso: +2 só quando usa o kit — condicional.
+ *  - Dahllan: +2 em Adestramento só se receber a habilidade novamente.
+ *  - Kliren / Vanguardista: +2 em um Ofício à escolha — depende de escolha.
+ *  - Lefou / Deformidade: +2 em duas perícias à escolha — depende de escolha.
+ *  - Humano/Kliren/Osteon: concedem TREINO, não bônus (Versátil já implementado).
+ */
 export const raceData: Record<string, RaceInfo> = {
   'Humano': {
     attributeBonuses: '+2 em três atributos à escolha',
@@ -27,11 +40,15 @@ export const raceData: Record<string, RaceInfo> = {
     attributeBonuses: 'INT +4, DES +2, CON –2',
     abilities: ['Graça de Glórienn', 'Herança Feérica', 'Sentidos Élficos'],
     attributeMods: { intelligence: 4, dexterity: 2, constitution: -2 },
+    // Sentidos Élficos: visão na penumbra e +2 em Misticismo e Percepção.
+    skillBonuses: { misticismo: 2, percepcao: 2 },
   },
   'Goblin': {
     attributeBonuses: 'DES +4, INT +2, CAR –2',
     abilities: ['Engenhoso', 'Espelunqueiro', 'Peste Esguia', 'Rato das Ruas'],
     attributeMods: { dexterity: 4, intelligence: 2, charisma: -2 },
+    // Rato das Ruas: +2 em Fortitude (e piso na recuperação de PV/PM).
+    skillBonuses: { fortitude: 2 },
   },
   'Lefou': {
     attributeBonuses: '+2 em três atributos (exceto CAR), CAR –2',
@@ -57,6 +74,8 @@ export const raceData: Record<string, RaceInfo> = {
     attributeBonuses: 'DES +4, CAR +2, FOR –2',
     abilities: ['Arremessador', 'Pequeno e Rechonchudo', 'Sorte Salvadora'],
     attributeMods: { dexterity: 4, charisma: 2, strength: -2 },
+    // Pequeno e Rechonchudo: +2 em Enganação (usar DES em Atletismo não é bônus).
+    skillBonuses: { enganacao: 2 },
   },
   'Kliren': {
     attributeBonuses: 'INT +4, CAR +2, FOR –2',
@@ -87,11 +106,15 @@ export const raceData: Record<string, RaceInfo> = {
     attributeBonuses: 'SAB +4, CAR +2',
     abilities: ['Herança Divina', 'Luz Sagrada'],
     attributeMods: { wisdom: 4, charisma: 2 },
+    // Luz Sagrada: +2 em Diplomacia e Intuição (além da magia Luz).
+    skillBonuses: { diplomacia: 2, intuicao: 2 },
   },
   'Suraggel (Sulfure)': {
     attributeBonuses: 'DES +4, INT +2',
     abilities: ['Herança Divina', 'Sombras Profanas'],
     attributeMods: { dexterity: 4, intelligence: 2 },
+    // Sombras Profanas: +2 em Enganação e Furtividade (além da magia Escuridão).
+    skillBonuses: { enganacao: 2, furtividade: 2 },
   },
   'Trog': {
     attributeBonuses: 'CON +4, FOR +2, INT –2',

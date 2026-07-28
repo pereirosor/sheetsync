@@ -42,13 +42,13 @@ export const originData: Record<string, string[]> = {
   'Trabalhador':               ['Atletismo', 'Fortitude', 'Atlético', 'Esforçado'],
   // Origens complementares (Complemento – Origens)
   'Aluno Irregular':           ['Misticismo', 'Vontade', 'Resistência Mágica', 'Ativação de Pergaminho'],
-  'Filho de Svalas':           ['Conhecimento (Religioso)', 'Nobreza', 'Vontade', 'Bênção de Svalas'],
+  'Filho de Svalas':           ['Conhecimento', 'Nobreza', 'Vontade', 'Bênção de Svalas'],
   'Filha de Moreania':         ['Adestramento', 'Sobrevivência', 'Companheiro Animal Pequeno'],
   'Indomável':                 ['Atletismo', 'Fortitude', 'Vontade de Ferro', 'Golpe Natural'],
   'Kami':                      ['Misticismo', 'Percepção', 'Vontade', 'Companheiro Kami'],
   'Malandragem de Ahlen':      ['Enganação', 'Furtividade', 'Ladinagem', 'Sortudo'],
   'Nativo de Midgard':         ['Atletismo', 'Fortitude', 'Sobrevivência', 'Adaptação Nórdica', 'Lobo Solitário'],
-  'Retornado de Helheim':      ['Conhecimento (Plano Espiritual)', 'Fortitude', 'Vontade', 'Marca do Retorno', 'Memória de Além'],
+  'Retornado de Helheim':      ['Conhecimento', 'Fortitude', 'Vontade', 'Marca do Retorno', 'Memória de Além'],
   'Sobrevivente da Névoa':     ['Furtividade', 'Percepção', 'Vontade', 'Sentidos da Névoa', 'Resistência à Tormenta'],
 };
 

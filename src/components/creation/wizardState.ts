@@ -8,6 +8,14 @@ export type AttributeMethod = 'point-buy' | 'roll' | 'manual';
 export const MANUAL_MIN = 1;
 export const MANUAL_MAX = 30;
 
+/** Raças cuja habilidade "Versátil" concede perícias treinadas livres. */
+export const VERSATILE_RACE = 'Humano';
+export const VERSATILE_SKILL_COUNT = 2;
+
+export function hasVersatile(state: WizardState): boolean {
+  return state.race === VERSATILE_RACE;
+}
+
 export const EMPTY_ATTR_BASE: Record<AttributeKey, number> = {
   strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   size: 0, power: 0, appearance: 0, education: 0,
@@ -31,6 +39,8 @@ export interface WizardState {
   rolledAssignments: Partial<Record<AttributeKey, number>>;
   rollAttempts: number;
   skillChoices: string[];
+  /** Humano — habilidade "Versátil": 2 perícias treinadas livres (T20, RAW). */
+  versatileSkills: string[];
   startingMoney: number;
   weaponSimple: string;
   weaponMartial: string;
@@ -54,6 +64,7 @@ export const initialWizardState: WizardState = {
   rolledAssignments: {},
   rollAttempts: 0,
   skillChoices: [],
+  versatileSkills: [],
   startingMoney: 0,
   weaponSimple: '',
   weaponMartial: '',

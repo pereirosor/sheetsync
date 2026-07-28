@@ -85,6 +85,22 @@ async function saveCharacter(ch: Character): Promise<void> {
   );
 }
 
+/**
+ * Conhecimento era dividido em 6 sub-perícias (conhecimento_arcano, _natureza, ...).
+ * O livro tem uma perícia única. Fichas antigas guardam as chaves antigas, então
+ * colapsamos: treinado em qualquer variante => treinado em 'conhecimento'.
+ */
+const migrateConhecimento = (skills: Record<string, boolean> | undefined) => {
+  if (!skills) return skills;
+  const legacy = Object.keys(skills).filter((k) => k.startsWith('conhecimento_'));
+  if (legacy.length === 0) return skills;
+  const migrated = { ...skills };
+  const wasTrained = legacy.some((k) => migrated[k]);
+  for (const k of legacy) delete migrated[k];
+  migrated.conhecimento = migrated.conhecimento || wasTrained;
+  return migrated;
+};
+
 const normalizeCharacter = (ch: Character): Character => ({
   ...ch,
   userId: ch.userId ?? '',
@@ -96,6 +112,7 @@ const normalizeCharacter = (ch: Character): Character => ({
   powers: ch.powers ?? [],
   pendingLevelUp: ch.pendingLevelUp ?? false,
   deathState: ch.deathState ?? 'alive',
+  skills: migrateConhecimento(ch.skills) ?? ch.skills,
 });
 
 async function loadAllCharacters(campaign: Campaign): Promise<Record<string, Character>> {

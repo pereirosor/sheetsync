@@ -1,6 +1,7 @@
 import tormenta20 from '../../../systems/tormenta20';
+import { resolveSkillId } from '../../../utils/resolveSkillId';
 import type { AttributeKey } from '../../../types';
-import { computeFinalAttributes, computeDerivedVitals, T20_ATTRS, type WizardState } from '../wizardState';
+import { computeFinalAttributes, computeDerivedVitals, hasVersatile, T20_ATTRS, type WizardState } from '../wizardState';
 
 const ATTR_LABELS: Record<AttributeKey, string> = {
   strength: 'For', dexterity: 'Des', constitution: 'Con',
@@ -27,9 +28,17 @@ export default function ReviewStep({ state, characterName }: Props) {
   const hpMax = derived?.hpMax ?? 10;
   const manaMax = derived?.manaMax ?? 0;
 
+  // Precisa espelhar buildCharacter: perícias de origem também são salvas, e omiti-las
+  // aqui fazia a Revisão mostrar menos perícias do que a ficha realmente recebe.
+  const originSkillIds = state.originBenefits
+    .map(resolveSkillId)
+    .filter(Boolean) as string[];
+
   const allSkills = [
     ...(cd?.trainedSkills ?? []),
     ...state.skillChoices,
+    ...originSkillIds,
+    ...(hasVersatile(state) ? state.versatileSkills : []),
   ];
   const uniqueSkills = [...new Set(allSkills)];
 
